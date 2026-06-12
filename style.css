@@ -768,3 +768,13 @@ html, body {
 .bottom-nav {
   height: 78px !important;
 }
+/* REMOVE BANNER INSTALAR APP */
+
+.install-banner,
+.install-card,
+.install-prompt,
+.pwa-install,
+#installBanner,
+#installPrompt {
+    display: none !important;
+}
