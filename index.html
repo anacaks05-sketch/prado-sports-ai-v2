@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Prado Sports AI</title>
+<meta name="description" content="Estatísticas de futebol em tempo real, IA de palpites e os principais campeonatos do mundo.">
+<meta name="theme-color" content="#070B11">
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prado Sports AI">
+
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-mark">P</div>
+      <div>
+        <div class="logo-text">Prado Sports<span> AI</span></div>
+        <div class="logo-sub">Futebol &amp; Inteligência</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="search-btn">🔍</button>
+      <button class="icon-btn" id="theme-btn">🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="page-home" class="page active"></section>
+    <section id="page-live" class="page"></section>
+    <section id="page-ai" class="page"></section>
+    <section id="page-rank" class="page"></section>
+    <section id="page-more" class="page"></section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-page="home"><span class="nav-icon">🏠</span>Início</button>
+    <button class="nav-item" data-page="live"><span class="nav-icon-wrap"><span class="nav-icon">📺</span><span class="nav-dot"></span></span>Ao Vivo</button>
+    <button class="nav-item" data-page="ai"><span class="nav-icon">🤖</span>IA Palpites</button>
+    <button class="nav-item" data-page="rank"><span class="nav-icon">🏅</span>Rankings</button>
+    <button class="nav-item" data-page="more"><span class="nav-icon">☰</span>Mais</button>
+  </nav>
+
+  <div class="detail-overlay" id="match-detail"></div>
+  <div id="toast"></div>
+</div>
+
+<script src="./data.js"></script>
+<script src="./config.js"></script>
+<script src="./api.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
