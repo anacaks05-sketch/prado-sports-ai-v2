@@ -568,3 +568,119 @@ body {
   background: linear-gradient(135deg, rgba(33,230,161,.18), rgba(0,194,255,.12));
   border: 1px solid rgba(33,230,161,.25);
 }
+/* ===== CORREÇÃO MOBILE V2 ===== */
+
+html, body {
+  overflow-x: hidden;
+}
+
+.app {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+}
+
+.app-header {
+  height: 74px;
+  padding: 12px 18px;
+}
+
+.logo-title {
+  font-size: 18px !important;
+  line-height: 1.1;
+}
+
+.logo-sub {
+  font-size: 9px !important;
+  letter-spacing: 3px;
+}
+
+.logo-mark {
+  width: 46px !important;
+  height: 46px !important;
+  font-size: 20px !important;
+}
+
+.header-actions .icon-btn,
+.icon-btn {
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 18px !important;
+}
+
+.install-banner {
+  margin: 14px 16px;
+  padding: 16px;
+  border-radius: 22px;
+}
+
+.install-banner .ib-icon {
+  font-size: 26px;
+}
+
+.install-banner b {
+  font-size: 15px;
+}
+
+.install-banner span {
+  font-size: 13px;
+}
+
+.install-banner button {
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.section-head {
+  margin: 22px 16px 12px;
+}
+
+.section-title {
+  font-size: 22px !important;
+}
+
+.hscroll {
+  padding-left: 16px;
+  gap: 12px;
+}
+
+.live-card {
+  min-width: 250px;
+  max-width: 250px;
+  padding: 16px;
+  border-radius: 24px;
+}
+
+.card {
+  margin-left: 16px;
+  margin-right: 16px;
+  border-radius: 24px;
+}
+
+.match-row {
+  grid-template-columns: 72px 1fr 44px 30px;
+  padding: 18px 12px;
+}
+
+.match-teams .t {
+  font-size: 16px;
+}
+
+.match-time {
+  font-size: 15px;
+}
+
+.bottom-nav {
+  height: 72px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+  font-size: 12px;
+}
+
+.nav-ico {
+  font-size: 24px;
+}
