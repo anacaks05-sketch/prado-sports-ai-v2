@@ -778,3 +778,42 @@ html, body {
 #installPrompt {
     display: none !important;
 }
+/* ===== TOPO MOBILE SEM BATER NO RELÓGIO ===== */
+
+.app-header {
+  padding-top: 64px !important;
+  height: 132px !important;
+}
+
+.logo {
+  gap: 10px !important;
+}
+
+.logo-mark {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  font-size: 15px !important;
+}
+
+.logo-title {
+  font-size: 15px !important;
+  max-width: 170px !important;
+}
+
+.logo-sub {
+  font-size: 7px !important;
+  letter-spacing: 2px !important;
+}
+
+.header-actions {
+  transform: scale(.85);
+  transform-origin: right center;
+}
+
+main,
+.main,
+.app-main,
+.page.active {
+  padding-top: 18px !important;
+}
