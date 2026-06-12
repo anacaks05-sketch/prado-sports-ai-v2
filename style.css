@@ -684,3 +684,87 @@ html, body {
 .nav-ico {
   font-size: 24px;
 }
+/* ===== AJUSTE FINAL MOBILE ===== */
+
+.app-header {
+  padding-top: 48px !important;
+  height: 118px !important;
+}
+
+.logo-mark {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  font-size: 18px !important;
+}
+
+.logo-title {
+  font-size: 16px !important;
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.logo-sub {
+  font-size: 8px !important;
+  letter-spacing: 2px !important;
+}
+
+.header-actions {
+  gap: 8px !important;
+}
+
+.icon-btn {
+  width: 38px !important;
+  height: 38px !important;
+  font-size: 15px !important;
+}
+
+.install-banner {
+  margin: 20px 20px 24px !important;
+  padding: 18px !important;
+  display: grid !important;
+  grid-template-columns: 38px 1fr auto;
+  gap: 14px;
+}
+
+.install-banner b {
+  font-size: 16px !important;
+}
+
+.install-banner span {
+  font-size: 13px !important;
+  line-height: 1.4;
+}
+
+.install-banner button {
+  font-size: 14px !important;
+  padding: 10px 18px !important;
+}
+
+.section-title {
+  font-size: 24px !important;
+}
+
+.live-card {
+  min-width: 270px !important;
+  max-width: 270px !important;
+  padding: 18px !important;
+}
+
+.card {
+  border-radius: 24px !important;
+}
+
+.match-row {
+  grid-template-columns: 64px 1fr 34px 26px !important;
+  padding: 18px 10px !important;
+}
+
+.match-teams .t {
+  font-size: 16px !important;
+}
+
+.bottom-nav {
+  height: 78px !important;
+}
