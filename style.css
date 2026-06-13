@@ -1076,3 +1076,16 @@ main{
 .premium-locked-icon{
   margin:0 auto 10px;
 }
+
+/* Real team logos from API-Football */
+
+.crest.crest-img{ background:rgba(255,255,255,.08)!important; border:1px solid rgba(255,255,255,.10); overflow:hidden; position:relative; color:var(--text); }
+.crest.crest-img img{ width:100%; height:100%; object-fit:contain; display:block; padding:2px; box-sizing:border-box; }
+.crest.crest-img span{ display:none; position:absolute; inset:0; align-items:center; justify-content:center; font-weight:800; }
+.crest.crest-img.crest-fallback img{ display:none!important; }
+.crest.crest-img.crest-fallback span{ display:flex; }
+
+/* API detail loading */
+.api-loading-card{ padding:18px; display:flex; gap:10px; align-items:center; justify-content:center; color:var(--text-dim); font-weight:700; font-size:12px; }
+.loading-spinner{ width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,.18); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }

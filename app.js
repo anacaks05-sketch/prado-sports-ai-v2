@@ -1266,15 +1266,35 @@ function openMatchDetail(id, tab){
   ov.classList.add('open');
   document.body.style.overflow='hidden';
 
+  const selectedTab = tab || 'resumo';
   if(tab){
     const t = ov.querySelector(`.tab[data-tab="${tab}"]`);
     if(t) t.click();
   }
+
+  if(m.source === 'api-football' && typeof PradoAPI !== 'undefined' && PradoAPI.fetchMatchDetails && !m.detailsLoaded && !m.detailsLoading){
+    m.detailsLoading = true;
+    PradoAPI.fetchMatchDetails(m)
+      .catch(err => { console.warn('Detalhes da partida indisponíveis:', err.message || err); })
+      .finally(() => {
+        m.detailsLoading = false;
+        if(currentMatchId === id) openMatchDetail(id, selectedTab);
+      });
+  }
+}
+
+function detailLoading(text){
+  return `<div class="card api-loading-card"><div class="loading-spinner"></div><div>${text}</div></div>`;
+}
+function statsHasValues(stats){
+  if(!stats) return false;
+  return Object.values(stats).flat().some(v => Number(v) > 0);
 }
 
 function detailResumo(m){
-  if(!m.events) return emptyState('📝', m.status==='scheduled' ? 'A partida ainda não começou. Acompanhe a transmissão minuto a minuto aqui quando começar.' : 'Sem eventos registrados para esta partida na demo.');
-  const icons = {goal:'⚽', yellow:'🟨', red:'🟥', sub:'🔄', corner:'🚩', var:'📺'};
+  if(m.detailsLoading) return detailLoading('Carregando eventos e detalhes da partida...');
+  if(!m.events || !m.events.length) return emptyState('📝', m.status==='scheduled' ? 'A partida ainda não começou. Acompanhe a transmissão minuto a minuto aqui quando começar.' : 'A API ainda não liberou eventos detalhados para esta partida.');
+  const icons = {goal:'⚽', yellow:'🟨', red:'🟥', sub:'🔄', corner:'🚩', var:'📺', info:'•'};
   let h = `<div class="card" style="padding:6px 12px;margin-bottom:6px">`;
   [...m.events].reverse().forEach(e=>{
     h += `<div class="commentary-item">
@@ -1287,7 +1307,8 @@ function detailResumo(m){
 }
 
 function detailStats(m){
-  if(!m.stats) return emptyState('📊','Estatísticas detalhadas estarão disponíveis quando a partida começar.');
+  if(m.detailsLoading) return detailLoading('Buscando estatísticas reais da API...');
+  if(!statsHasValues(m.stats)) return emptyState('📊','A API ainda não liberou estatísticas detalhadas para esta partida.');
   const s = m.stats;
   const rows = [
     {label:'Posse de bola (%)', a:s.possession[0], b:s.possession[1], suffix:'%'},
@@ -1316,7 +1337,8 @@ function detailStats(m){
 }
 
 function detailLineups(m){
-  if(!m.lineups) return emptyState('👥','Escalações confirmadas serão exibidas próximo do início da partida.');
+  if(m.detailsLoading) return detailLoading('Buscando escalações reais da API...');
+  if(!m.lineups) return emptyState('👥','Escalações confirmadas serão exibidas quando a API liberar esse dado.');
   return `
     <div style="font-size:11px;color:var(--text-faint);margin-bottom:6px;text-align:center">Formação: <b style="color:var(--text)">${m.lineups.home.formation}</b> · ${teamName(m.home)}</div>
     <div class="pitch" id="pitch-home">${formationHTML(m.lineups.home, m.home)}<div class="line-mid"></div></div>
@@ -1348,7 +1370,8 @@ function formationRows(formation){
 }
 
 function detailMaps(m){
-  if(!m.stats) return emptyState('🗺️','Mapas de calor e finalizações ficam disponíveis durante e após a partida.');
+  if(m.detailsLoading) return detailLoading('Montando mapas com dados da partida...');
+  if(!statsHasValues(m.stats)) return emptyState('🗺️','Mapas de calor e finalizações ficam disponíveis quando houver estatísticas da partida.');
   return `
     <div class="viz-card card">
       <div class="viz-title">Mapa de chutes (Shotmap)</div>

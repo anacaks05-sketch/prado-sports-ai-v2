@@ -333,7 +333,11 @@ function fmtTime(iso){
 }
 function crestHTML(code, size=24){
   const t = TEAMS[code] || {name:code, color:'#444'};
-  return `<div class="crest" style="width:${size}px;height:${size}px;background:${t.color};font-size:${Math.round(size*0.42)}px">${initials(code)}</div>`;
+  const label = initials(code);
+  if(t.logo){
+    return `<div class="crest crest-img" style="width:${size}px;height:${size}px;background:${t.color||'#16202d'};font-size:${Math.round(size*0.42)}px" title="${t.name||code}"><img src="${t.logo}" alt="${t.name||code}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('crest-fallback')"><span>${label}</span></div>`;
+  }
+  return `<div class="crest" style="width:${size}px;height:${size}px;background:${t.color};font-size:${Math.round(size*0.42)}px">${label}</div>`;
 }
 function teamName(code){ return (TEAMS[code]||{name:code}).name; }
 function leagueOf(m){ return LEAGUES[m.league]; }

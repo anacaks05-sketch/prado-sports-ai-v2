@@ -164,6 +164,9 @@ const PradoAPI = (() => {
 
     return {
       id: String(item.fixture.id),
+      apiFixtureId: String(item.fixture.id),
+      source: 'api-football',
+      teamIds: { home: item.teams.home?.id || null, away: item.teams.away?.id || null },
       league: leagueCode(item.league || {}),
       date: item.fixture.date,
       status,
@@ -206,5 +209,116 @@ const PradoAPI = (() => {
     });
   }
 
-  return { fetchMatches, makePredictions };
+  function numValue(v){
+    if(v === null || v === undefined) return 0;
+    if(typeof v === 'number') return v;
+    const n = Number(String(v).replace('%','').replace(',','.').trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function readStatMap(teamStats){
+    const map = {};
+    (teamStats?.statistics || []).forEach(item => {
+      map[String(item.type || '').toLowerCase()] = numValue(item.value);
+    });
+    return map;
+  }
+
+  function firstAvailable(map, names){
+    for(const name of names){
+      const key = String(name).toLowerCase();
+      if(map[key] !== undefined) return map[key];
+    }
+    return 0;
+  }
+
+  function mapStatistics(statsResponse){
+    if(!Array.isArray(statsResponse) || statsResponse.length < 2) return null;
+    const home = readStatMap(statsResponse[0]);
+    const away = readStatMap(statsResponse[1]);
+    const mapped = {
+      possession:[firstAvailable(home,['Ball Possession','possession']), firstAvailable(away,['Ball Possession','possession'])],
+      shotsOnTarget:[firstAvailable(home,['Shots on Goal','Shots on Target']), firstAvailable(away,['Shots on Goal','Shots on Target'])],
+      shotsOffTarget:[firstAvailable(home,['Shots off Goal','Shots off Target']), firstAvailable(away,['Shots off Goal','Shots off Target'])],
+      corners:[firstAvailable(home,['Corner Kicks','Corners']), firstAvailable(away,['Corner Kicks','Corners'])],
+      fouls:[firstAvailable(home,['Fouls']), firstAvailable(away,['Fouls'])],
+      yellow:[firstAvailable(home,['Yellow Cards']), firstAvailable(away,['Yellow Cards'])],
+      red:[firstAvailable(home,['Red Cards']), firstAvailable(away,['Red Cards'])],
+      xg:[firstAvailable(home,['expected_goals','Expected Goals']), firstAvailable(away,['expected_goals','Expected Goals'])],
+      xa:[0,0],
+      dangerousAttacks:[0,0]
+    };
+    const hasAny = Object.values(mapped).flat().some(v => Number(v) > 0);
+    return hasAny ? mapped : null;
+  }
+
+  function eventIconText(ev){
+    const type = String(ev?.type || '').toLowerCase();
+    const detail = String(ev?.detail || '').toLowerCase();
+    if(type.includes('goal') || detail.includes('goal')) return 'goal';
+    if(detail.includes('yellow')) return 'yellow';
+    if(detail.includes('red')) return 'red';
+    if(type.includes('subst')) return 'sub';
+    if(type.includes('var') || detail.includes('var')) return 'var';
+    return 'info';
+  }
+
+  function mapEvents(eventsResponse, match){
+    if(!Array.isArray(eventsResponse) || !eventsResponse.length) return [];
+    return eventsResponse.map(ev => {
+      const teamId = ev?.team?.id;
+      const side = String(teamId) === String(match?.teamIds?.home) ? 'home' : (String(teamId) === String(match?.teamIds?.away) ? 'away' : 'neutral');
+      const player = ev?.player?.name ? `<b>${ev.player.name}</b>` : '';
+      const assist = ev?.assist?.name ? ` Assistência: ${ev.assist.name}.` : '';
+      const detail = ev?.detail || ev?.type || 'Evento';
+      const comments = ev?.comments ? ` ${ev.comments}` : '';
+      const elapsed = ev?.time?.elapsed || 0;
+      const extra = ev?.time?.extra ? `+${ev.time.extra}` : '';
+      return {
+        min: `${elapsed}${extra}`,
+        type: eventIconText(ev),
+        team: side,
+        text: `${detail}${player ? ` — ${player}` : ''}.${assist}${comments}`
+      };
+    });
+  }
+
+  function mapLineups(lineupsResponse){
+    if(!Array.isArray(lineupsResponse) || lineupsResponse.length < 2) return null;
+    const mapOne = (team) => ({
+      formation: team?.formation || '—',
+      players: (team?.startXI || []).slice(0,11).map((item, idx) => ({
+        n: item?.player?.number || idx + 1,
+        p: item?.player?.name || 'Jogador'
+      }))
+    });
+    const home = mapOne(lineupsResponse[0]);
+    const away = mapOne(lineupsResponse[1]);
+    if(!home.players.length || !away.players.length) return null;
+    return { home, away };
+  }
+
+  async function fetchMatchDetails(match){
+    if(!match?.apiFixtureId) return match;
+    const fixture = match.apiFixtureId;
+    const [statsRes, eventsRes, lineupsRes] = await Promise.all([
+      safeGet(`estatísticas ${fixture}`, 'fixtures/statistics', { fixture }),
+      safeGet(`eventos ${fixture}`, 'fixtures/events', { fixture }),
+      safeGet(`escalações ${fixture}`, 'fixtures/lineups', { fixture })
+    ]);
+
+    const stats = mapStatistics(statsRes);
+    const events = mapEvents(eventsRes, match);
+    const lineups = mapLineups(lineupsRes);
+
+    if(stats) match.stats = stats;
+    else if(match.stats && Object.values(match.stats).flat().every(v => Number(v) === 0)) match.stats = null;
+
+    match.events = events;
+    if(lineups) match.lineups = lineups;
+    match.detailsLoaded = true;
+    return match;
+  }
+
+  return { fetchMatches, makePredictions, fetchMatchDetails };
 })();
