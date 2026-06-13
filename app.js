@@ -17,6 +17,20 @@ const state = {
 };
 
 
+
+
+// ===================== PREMIUM SVG ICONS =====================
+const PRADO_ICONS = {
+  live:'<span class="premium-icon live"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2"></path></svg></span>',
+  calendar:'<span class="premium-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M8 3v4M16 3v4M4 10h16"></path></svg></span>',
+  next:'<span class="premium-icon"><svg viewBox="0 0 24 24"><path d="M5 5v14l9-7zM16 5v14"></path></svg></span>',
+  chart:'<span class="premium-icon"><svg viewBox="0 0 24 24"><path d="M5 19V5M5 19h14"></path><path d="M8 15l3-3 3 2 4-6"></path></svg></span>',
+  trophy:'<span class="premium-icon gold"><svg viewBox="0 0 24 24"><path d="M8 4h8v4a4 4 0 0 1-8 0z"></path><path d="M8 6H4a4 4 0 0 0 4 4M16 6h4a4 4 0 0 1-4 4M12 12v5M9 20h6M10 17h4"></path></svg></span>',
+  ai:'<span class="premium-icon ai"><svg viewBox="0 0 24 24"><path d="M12 2l1.6 5.7L19 10l-5.4 2.3L12 18l-1.6-5.7L5 10l5.4-2.3z"></path></svg></span>',
+  ball:'<span class="premium-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7l4 3-1.5 5h-5L8 10z"></path></svg></span>',
+  note:'<span class="premium-icon"><svg viewBox="0 0 24 24"><path d="M7 4h8l4 4v12H7z"></path><path d="M15 4v5h5M10 13h7M10 17h5"></path></svg></span>'
+};
+
 // ===================== REAL API LOADER =====================
 async function loadRealDataIfConfigured(){
   const status = document.createElement('div');
@@ -123,42 +137,42 @@ function renderHome(){
   let html = '';
 
   // Live
-  html += sectionHead('🔴 Ao vivo agora', live.length?`${live.length} jogos`:null);
+  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', live.length?`${live.length} jogos`:null);
   if(live.length){
     html += `<div class="hscroll">`;
     live.forEach(m=> html += liveCard(m));
     html += `</div>`;
   } else {
-    html += emptyState('⚽','Nenhum jogo ao vivo neste momento');
+    html += emptyState(PRADO_ICONS.ball,'Nenhum jogo ao vivo neste momento');
   }
 
   // Today's games
-  html += sectionHead('📅 Jogos de hoje', null);
+  html += sectionHead(PRADO_ICONS.calendar + 'Jogos de hoje', null);
   html += `<div class="card">`;
   if(today.length) today.forEach(m=> html += matchRow(m));
-  else html += emptyState('🗓️','Sem mais jogos hoje');
+  else html += emptyState(PRADO_ICONS.calendar,'Sem mais jogos hoje');
   html += `</div>`;
 
   // Upcoming
-  html += sectionHead('⏭️ Próximos jogos', 'Ver calendário', ()=>{ goToPage('more'); showMoreSub('calendar'); });
+  html += sectionHead(PRADO_ICONS.next + 'Próximos jogos', 'Ver calendário', ()=>{ goToPage('more'); showMoreSub('calendar'); });
   html += `<div class="card">`;
   upcoming.forEach(m=> html += matchRow(m, true));
   html += `</div>`;
 
   // Recent results
-  html += sectionHead('📈 Resultados recentes', null);
+  html += sectionHead(PRADO_ICONS.chart + 'Resultados recentes', null);
   html += `<div class="card">`;
   recent.forEach(m=> html += matchRow(m));
   html += `</div>`;
 
   // Featured competitions
-  html += sectionHead('🏆 Campeonatos em destaque', 'Ver todos', ()=>{ goToPage('more'); showMoreSub('competitions'); });
+  html += sectionHead(PRADO_ICONS.trophy + 'Campeonatos em destaque', 'Ver todos', ()=>{ goToPage('more'); showMoreSub('competitions'); });
   html += `<div class="comp-grid">`;
   ['WC','BRA_A','UCL','LIBERTA'].forEach(code=> html += compTile(code));
   html += `</div>`;
 
   // AI ranking
-  html += sectionHead('🤖 Ranking dos melhores palpites', 'Ver IA completa', ()=> goToPage('ai'));
+  html += sectionHead(PRADO_ICONS.ai + 'Ranking dos melhores palpites', 'Ver IA completa', ()=> goToPage('ai'));
   html += `<div class="card" style="padding:4px 10px">`;
   topPicks.forEach((p,i)=>{
     const m = MATCHES.find(x=>x.id===p.matchId);
@@ -878,7 +892,7 @@ function openMatchDetail(id, tab){
 
   let html = `
     <div class="detail-scoreboard">
-      <div class="detail-league">${lg.icon} ${lg.name} · ${m.round||''}</div>
+      <div class="detail-league">${PRADO_ICONS.trophy} ${lg.name} · ${m.round||''}</div>
       <div class="detail-teams">
         <div class="side">${crestHTML(m.home,52).replace('width:52px;height:52px','width:52px;height:52px')}<div class="tname">${teamName(m.home)}</div></div>
         <div class="detail-score-mid">${scoreHTML}${statusHTML}</div>

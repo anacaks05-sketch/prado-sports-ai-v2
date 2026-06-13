@@ -707,3 +707,69 @@ body{ background:radial-gradient(700px 420px at 50% -140px, rgba(34,245,167,.11)
   .detail-score-mid .sc{ font-size:24px!important; }
   .tabbar .tab{ padding:7px 12px!important; }
 }
+
+/* ===================== PRADO FINAL PREMIUM UPGRADE ===================== */
+.logo-mark{ width:28px!important; height:28px!important; border-radius:10px!important; flex:0 0 28px; }
+.logo-mark span{ font-size:16px!important; }
+.logo{ gap:8px!important; align-items:center!important; }
+.logo-text{ letter-spacing:.1px; }
+.topbar-actions .search-premium svg,
+.nav-icon svg,
+.premium-icon svg{ width:18px; height:18px; display:block; fill:none; stroke:currentColor; stroke-width:2.15; stroke-linecap:round; stroke-linejoin:round; }
+.nav-icon svg path:first-child{ fill:currentColor; stroke:currentColor; }
+.nav-news svg path:first-child{ fill:none!important; }
+.search-premium{ background:rgba(255,255,255,.055)!important; box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 8px 20px -14px rgba(0,0,0,.9); }
+.search-premium svg{ width:18px; height:18px; }
+.section-title{ gap:7px!important; }
+.section-title .dot{ display:none!important; }
+.premium-icon{ width:24px; height:24px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 24px; color:var(--accent); background:rgba(34,245,167,.10); border:1px solid rgba(34,245,167,.15); vertical-align:middle; }
+.premium-icon.live{ color:var(--live); background:rgba(255,71,87,.12); border-color:rgba(255,71,87,.18); animation:premiumPulse 1.35s infinite; }
+.premium-icon.gold{ color:var(--gold); background:rgba(255,184,77,.12); border-color:rgba(255,184,77,.18); }
+.premium-icon.ai{ color:#9DEBFF; background:rgba(77,156,255,.13); border-color:rgba(77,156,255,.18); }
+@keyframes premiumPulse{ 0%,100%{box-shadow:0 0 0 0 rgba(255,71,87,.18)} 50%{box-shadow:0 0 0 7px rgba(255,71,87,0)} }
+.live-card{ flex-basis:160px!important; padding:10px!important; border-radius:18px!important; }
+.live-card .league-tag{ font-size:10px!important; margin-bottom:8px!important; }
+.team-row{ margin:5px 0!important; }
+.team-info{ gap:7px!important; font-size:12px!important; }
+.crest{ width:22px!important; height:22px!important; flex-basis:22px!important; border-radius:7px!important; font-size:10px!important; }
+.score{ font-size:13px!important; }
+.live-meta{ margin-top:8px!important; font-size:10px!important; }
+.card{ border-radius:20px!important; overflow:hidden; }
+.match-row{ min-height:56px; padding:8px 4px!important; }
+.match-teams .t{ gap:7px!important; line-height:1.25!important; }
+.match-extra{ font-size:22px!important; color:var(--text-faint); filter:drop-shadow(0 0 8px rgba(255,255,255,.08)); }
+.match-score{ font-size:16px!important; }
+.bottom-nav{ height:calc(66px + env(safe-area-inset-bottom))!important; background:rgba(6,13,23,.82)!important; backdrop-filter:blur(22px) saturate(150%)!important; border-top:1px solid rgba(255,255,255,.09)!important; box-shadow:0 -18px 40px -28px #000!important; }
+.nav-item{ font-size:10px!important; font-weight:800!important; letter-spacing:.1px; }
+.nav-item .nav-icon{ width:31px!important; height:31px!important; border-radius:12px!important; background:rgba(255,255,255,.04)!important; }
+.nav-item .nav-icon svg{ width:17px!important; height:17px!important; }
+.nav-item.active .nav-icon{ background:linear-gradient(135deg,#22F5A7,#16D4EC)!important; box-shadow:0 10px 24px -15px rgba(34,245,167,.9)!important; }
+.nav-dot{ animation:premiumPulse 1.3s infinite; }
+.news-thumb,.menu-icon,.empty .ic{ font-family:inherit!important; }
+.empty .ic{ font-size:0!important; margin-bottom:10px; }
+.empty .ic .premium-icon{ width:38px; height:38px; border-radius:14px; }
+.empty .ic .premium-icon svg{ width:21px; height:21px; }
+.detail-overlay{ z-index:120!important; background:radial-gradient(600px 300px at 50% -80px, rgba(34,245,167,.10), transparent 58%), var(--bg)!important; }
+.detail-head{ min-height:calc(42px + env(safe-area-inset-top))!important; padding:calc(env(safe-area-inset-top) + 6px) 12px 6px!important; align-items:center!important; }
+.detail-head .icon-btn{ width:34px!important; height:34px!important; border-radius:17px!important; font-size:20px!important; background:rgba(255,255,255,.075)!important; border:1px solid rgba(255,255,255,.12)!important; }
+.detail-scoreboard{ padding:10px 12px 0!important; transform:scale(.94); transform-origin:top center; margin-bottom:-10px; }
+.detail-league{ display:flex; justify-content:center; align-items:center; gap:6px; }
+.detail-league .premium-icon{ width:20px; height:20px; border-radius:8px; }
+.detail-league .premium-icon svg{ width:14px; height:14px; }
+.detail-teams .crest-lg{ width:38px!important; height:38px!important; border-radius:12px!important; font-size:14px!important; }
+.detail-teams .tname{ font-size:10.8px!important; max-width:94px!important; }
+.detail-score-mid .sc{ font-size:22px!important; }
+.detail-status{ margin-top:5px!important; }
+.tabbar{ padding:8px 12px 4px!important; }
+.tabbar .tab{ padding:7px 12px!important; font-size:11px!important; }
+.detail-body{ padding-top:2px!important; }
+.splash-logo{ animation:splashPop .75s cubic-bezier(.2,.95,.2,1) both, splashGlow 1.5s ease-in-out infinite alternate; }
+.splash-title{ font-size:26px!important; }
+.splash-sub{ color:#89A0B7!important; }
+@keyframes splashGlow{ from{ box-shadow:0 28px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12), 0 0 24px rgba(33,230,161,.12);} to{ box-shadow:0 28px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12), 0 0 54px rgba(33,230,161,.28);} }
+@media(max-width:380px){
+  .live-card{ flex-basis:150px!important; }
+  .match-row{ min-height:52px; }
+  .detail-scoreboard{ transform:scale(.90); margin-bottom:-16px; }
+  .detail-head > div{ font-size:11.5px!important; }
+}
