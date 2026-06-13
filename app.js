@@ -9,7 +9,7 @@ const state = {
   favTeam: localStorage.getItem('prado_fav_team') || '',
   favLeague: localStorage.getItem('prado_fav_league') || '',
   favMatches: JSON.parse(localStorage.getItem('prado_fav_matches') || '[]'),
-  theme: localStorage.getItem('prado_theme') || 'dark',
+  theme: 'dark',
   notifSettings: JSON.parse(localStorage.getItem('prado_notifs') || JSON.stringify({
     gol:true, cartao:true, escanteio:false, inicio:true, fim:true, entrada:false
   })),
@@ -51,7 +51,7 @@ async function loadRealDataIfConfigured(){
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', async () => {
-  applyTheme(state.theme);
+  applyTheme('dark');
   await loadRealDataIfConfigured();
   bindNav();
   renderHome();
@@ -74,22 +74,22 @@ function toast(msg, icon='✅'){
 }
 
 // ===================== THEME =====================
-function applyTheme(mode){
-  document.documentElement.setAttribute('data-theme', mode);
-  state.theme = mode;
-  localStorage.setItem('prado_theme', mode);
-  const btn = document.getElementById('theme-btn');
-  if(btn) btn.textContent = mode === 'dark' ? '🌙' : '☀️';
-  renderMore();
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', 'dark');
+  state.theme = 'dark';
+  localStorage.setItem('prado_theme', 'dark');
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if(metaTheme) metaTheme.setAttribute('content', '#050B14');
 }
-function toggleTheme(){ applyTheme(state.theme === 'dark' ? 'light' : 'dark'); }
+function toggleTheme(){ applyTheme(); }
 
 // ===================== NAV =====================
 function bindNav(){
   document.querySelectorAll('.nav-item').forEach(btn=>{
     btn.addEventListener('click', ()=> goToPage(btn.dataset.page));
   });
-  document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+  const themeBtn = document.getElementById('theme-btn');
+  if(themeBtn) themeBtn.addEventListener('click', toggleTheme);
   document.getElementById('search-btn').addEventListener('click', ()=> toast('Busca por times, jogadores e ligas — em breve 🔎','🔍'));
 }
 function goToPage(page){
@@ -431,38 +431,26 @@ function addToTicket(matchId){
   toast(`${teamName(m.home)} x ${teamName(m.away)} adicionado ao bilhete (${ticket.length} jogos)`, '🎟️');
 }
 
-// ===================== RANKINGS =====================
-const RANK_TABS = [
-  {id:'scorers', label:'⚽ Artilheiros'},
-  {id:'assists', label:'🎯 Assistências'},
-  {id:'keepers', label:'🧤 Goleiros'},
-  {id:'attack', label:'🔥 Times Ofensivos'},
-  {id:'defense', label:'🛡️ Times Defensivos'},
-  {id:'homeForm', label:'🏠 Melhores Mandantes'},
-  {id:'awayForm', label:'✈️ Melhores Visitantes'},
-];
+// ===================== NOTÍCIAS DO FUTEBOL =====================
 function renderRankings(){
-  let html = `<div class="section-head" style="margin-top:4px"><div class="section-title display">🏅 Rankings</div></div>`;
-  html += `<div class="chip-row">`;
-  RANK_TABS.forEach(t=> html += `<div class="chip ${state.rankTab===t.id?'active':''}" onclick="setRankTab('${t.id}')">${t.label}</div>`);
-  html += `</div>`;
+  renderFootballNews();
+}
 
-  const data = RANKINGS[state.rankTab];
-  const isPlayer = ['scorers','assists','keepers'].includes(state.rankTab);
-  const unitLabel = {scorers:'gols',assists:'assist.',keepers:'jogos sem sofrer'}[state.rankTab] || '';
-
-  html += `<div class="card" style="padding:4px 10px;margin-top:6px">`;
-  data.forEach(r=>{
-    html += `<div class="rank-row">
-      <div class="rank-pos">${r.pos}</div>
-      ${crestHTML(r.team,30)}
-      <div class="rank-info">
-        <div class="rank-name">${r.name}</div>
-        <div class="rank-sub">${isPlayer? teamName(r.team)+' · ':''}${r.sub}</div>
-      </div>
-      <div class="rank-val">${r.val}${isPlayer?`<small>${unitLabel}</small>`:''}</div>
-    </div>`;
-  });
+function renderFootballNews(){
+  let html = `<div class="section-head" style="margin-top:4px"><div class="section-title display">📰 Notícias do futebol</div></div>`;
+  html += `<div class="news-hero card">
+    <div class="news-hero-badge">Atualizações</div>
+    <div class="news-hero-title">Tudo do futebol em uma aba só</div>
+    <div class="news-hero-sub">Mercado da bola, jogos importantes, bastidores e alertas do Prado Sports AI.</div>
+  </div>`;
+  html += `<div class="chip-row" style="margin:12px 0 8px">
+    <div class="chip active">🔥 Destaques</div>
+    <div class="chip">⚽ Brasileirão</div>
+    <div class="chip">🌍 Europa</div>
+    <div class="chip">💰 Mercado</div>
+  </div>`;
+  html += `<div class="card news-list" style="padding:4px 10px;margin-top:8px">`;
+  NEWS.forEach(n=> html += newsCard(n));
   html += `</div>`;
   document.getElementById('page-rank').innerHTML = html;
 }
@@ -755,9 +743,9 @@ function renderSettingsSub(){
   return `
   <div class="menu-label">Aparência</div>
   <div class="card" style="padding:12px;margin-bottom:16px">
-    <div class="theme-toggle-row">
-      <div class="theme-opt ${state.theme==='dark'?'active':''}" data-theme-opt="dark">🌙 Escuro</div>
-      <div class="theme-opt ${state.theme==='light'?'active':''}" data-theme-opt="light">☀️ Claro</div>
+    <div class="theme-fixed">
+      <div class="theme-fixed-icon">🌙</div>
+      <div><div class="setting-label">Modo escuro premium</div><div class="setting-sub">Tema fixo para evitar tela apagada e deixar o app mais profissional.</div></div>
     </div>
   </div>
 
@@ -786,9 +774,6 @@ function renderSettingsSub(){
   </div>`;
 }
 function bindSettings(){
-  document.querySelectorAll('[data-theme-opt]').forEach(el=>{
-    el.addEventListener('click', ()=>{ applyTheme(el.dataset.themeOpt); showMoreSub('settings'); });
-  });
 }
 function setFavLeague(code){ state.favLeague=code; localStorage.setItem('prado_fav_league',code); toast(code?`${LEAGUES[code].name} definido como favorito! 🏆`:'Campeonato favorito removido'); }
 
