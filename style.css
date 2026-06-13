@@ -880,3 +880,26 @@ body{
 main{
   padding-top: 10px !important;
 }
+/* ===== STATUS BAR IPHONE PRETA ===== */
+
+html,
+body {
+  background: #070B11 !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: #070B11;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+#app {
+  background: #070B11 !important;
+  min-height: 100vh;
+}
