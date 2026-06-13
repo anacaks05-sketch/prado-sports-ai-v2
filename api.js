@@ -140,6 +140,37 @@ const PradoAPI = (() => {
   }
 
   function leagueCode(league){
+    const id = Number(league?.id || 0);
+    const canonicalById = {
+      1:'WC',        // FIFA World Cup
+      15:'CLUBWC',   // FIFA Club World Cup
+      71:'BRA_A', 72:'BRA_B', 73:'CDB',
+      13:'LIBERTA', 11:'SULAM',
+      2:'UCL', 3:'UEL',
+      39:'EPL', 140:'LALIGA', 78:'BUND', 135:'SERIEA', 61:'LIGUE1', 94:'PORTUGAL',
+      253:'MLS'
+    };
+    if(canonicalById[id] && LEAGUES[canonicalById[id]]) return canonicalById[id];
+
+    const n = String(league?.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const c = String(league?.country || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(n.includes('world cup') && !n.includes('club')) return 'WC';
+    if(n.includes('club world cup')) return 'CLUBWC';
+    if(n.includes('libertadores')) return 'LIBERTA';
+    if(n.includes('sudamericana') || n.includes('sul-americana')) return 'SULAM';
+    if(c.includes('brazil') && n.includes('serie a')) return 'BRA_A';
+    if(c.includes('brazil') && n.includes('serie b')) return 'BRA_B';
+    if(n.includes('copa do brasil')) return 'CDB';
+    if(n.includes('champions league')) return 'UCL';
+    if(n.includes('europa league')) return 'UEL';
+    if(n.includes('premier league') && c.includes('england')) return 'EPL';
+    if(n.includes('la liga')) return 'LALIGA';
+    if(n.includes('bundesliga')) return 'BUND';
+    if(n.includes('serie a') && c.includes('italy')) return 'SERIEA';
+    if(n.includes('ligue 1')) return 'LIGUE1';
+    if(n.includes('primeira liga') && c.includes('portugal')) return 'PORTUGAL';
+    if(n === 'major league soccer' || n.includes('mls')) return 'MLS';
+
     const code = String(league?.name || 'Liga').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/[^A-Za-z]/g,'').slice(0,8).toUpperCase() + String(league?.id || '').slice(-3);
     if(!LEAGUES[code]){
@@ -149,7 +180,7 @@ const PradoAPI = (() => {
         icon: league?.country === 'Brazil' ? '🇧🇷' : '🏆',
         color: '#21E6A1',
         logo: league?.logo || '',
-        tier: 'API-Sports'
+        tier: 'Outras ligas'
       };
     }
     return code;

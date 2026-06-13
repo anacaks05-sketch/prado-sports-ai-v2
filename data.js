@@ -58,13 +58,17 @@ const LEAGUES = {
   LIBERTA:{name:'Libertadores', country:'CONMEBOL', icon:'🌎', color:'#7A1FA2', tier:'Internacional'},
   SULAM:{name:'Sul-Americana', country:'CONMEBOL', icon:'🌎', color:'#E65100', tier:'Internacional'},
   UCL:{name:'Champions League', country:'UEFA', icon:'⭐', color:'#0B2D6B', tier:'Internacional'},
+  UEL:{name:'Europa League', country:'UEFA', icon:'🏆', color:'#F57C00', tier:'Internacional'},
   EPL:{name:'Premier League', country:'Inglaterra', icon:'🏴', color:'#3D195B', tier:'Liga nacional'},
   LALIGA:{name:'La Liga', country:'Espanha', icon:'🇪🇸', color:'#EE8707', tier:'Liga nacional'},
   BUND:{name:'Bundesliga', country:'Alemanha', icon:'🇩🇪', color:'#D20515', tier:'Liga nacional'},
   SERIEA:{name:'Serie A', country:'Itália', icon:'🇮🇹', color:'#024494', tier:'Liga nacional'},
   LIGUE1:{name:'Ligue 1', country:'França', icon:'🇫🇷', color:'#091C3E', tier:'Liga nacional'},
+  PORTUGAL:{name:'Portugal Primeira Liga', country:'Portugal', icon:'🇵🇹', color:'#046A38', tier:'Liga nacional'},
   WC:{name:'Copa do Mundo 2026', country:'EUA · México · Canadá', icon:'🏆', color:'#FFD100', tier:'Mundial'},
+  CLUBWC:{name:'Mundial de Clubes', country:'FIFA', icon:'🌍', color:'#00AEEF', tier:'Mundial'},
   ELIM:{name:'Eliminatórias', country:'Mundial', icon:'🌍', color:'#21E6A1', tier:'Mundial'},
+  MLS:{name:'MLS', country:'Estados Unidos', icon:'🇺🇸', color:'#0057B8', tier:'Liga nacional'},
 };
 
 // ---- Matches ----
@@ -312,7 +316,7 @@ let NEWS = [
 ];
 
 // ---- Competitions for grid ----
-const COMPETITIONS_LIST = ['WC','UCL','BRA_A','LIBERTA','EPL','LALIGA','BUND','SERIEA','LIGUE1','CDB','SULAM','BRA_B','ELIM'];
+const COMPETITIONS_LIST = ['WC','CLUBWC','BRA_A','LIBERTA','SULAM','UCL','UEL','EPL','LALIGA','SERIEA','BUND','LIGUE1','PORTUGAL','CDB','BRA_B','ELIM'];
 
 // ---- Odds (mock, for the Odds area) ----
 const ODDS = [

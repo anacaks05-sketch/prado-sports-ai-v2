@@ -1,4 +1,4 @@
-const CACHE_NAME = "prado-sports-ai-v11-api-logos-details";
+const CACHE_NAME = "prado-sports-ai-v12-filtros-premium";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",

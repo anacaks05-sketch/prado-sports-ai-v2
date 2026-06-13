@@ -403,20 +403,87 @@ function hideMoreSub(){
   document.getElementById('more-menu').style.display = 'block';
 }
 
+
+// ===================== FILTRO PREMIUM DE JOGOS =====================
+const PRADO_PRIORITY_LEAGUES = {
+  WC:1000, CLUBWC:980, LIBERTA:940, SULAM:900,
+  BRA_A:930, BRA_B:760, CDB:880, ELIM:860,
+  UCL:920, UEL:840, EPL:880, LALIGA:860, SERIEA:840, BUND:830, LIGUE1:800, PORTUGAL:760,
+  MLS:650
+};
+const PRADO_BIG_TEAM_WORDS = [
+  'brasil','brazil','flamengo','palmeiras','corinthians','sao paulo','são paulo','botafogo','fluminense','gremio','grêmio','internacional','atletico','atlético','bahia','vasco','cruzeiro','santos',
+  'real madrid','barcelona','manchester city','manchester united','liverpool','arsenal','chelsea','bayern','psg','paris saint','juventus','inter','milan','atletico madrid','atlético madrid',
+  'argentina','france','frança','england','inglaterra','spain','espanha','portugal','germany','alemanha','morocco','marrocos','uruguay','uruguai','colombia','colômbia'
+];
+function textNorm(value){
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+function matchPriorityScore(m){
+  const lg = leagueOf(m);
+  const name = textNorm(`${lg.name} ${lg.country} ${lg.tier} ${m.round||''} ${teamName(m.home)} ${teamName(m.away)}`);
+  let score = PRADO_PRIORITY_LEAGUES[m.league] || 0;
+
+  if(name.includes('world cup') || name.includes('copa do mundo')) score += 1000;
+  if(name.includes('club world cup') || name.includes('mundial de clubes')) score += 980;
+  if(name.includes('libertadores')) score += 940;
+  if(name.includes('sul-americana') || name.includes('sudamericana')) score += 900;
+  if(name.includes('brasileirao') || name.includes('serie a') && name.includes('brazil')) score += 900;
+  if(name.includes('copa do brasil')) score += 880;
+  if(name.includes('champions league')) score += 920;
+  if(name.includes('premier league')) score += 880;
+  if(name.includes('la liga')) score += 860;
+  if(name.includes('serie a') && (name.includes('italy') || name.includes('italia'))) score += 840;
+  if(name.includes('bundesliga')) score += 830;
+  if(name.includes('ligue 1')) score += 800;
+  if(name.includes('primeira liga') || name.includes('portugal')) score += 760;
+
+  if(PRADO_BIG_TEAM_WORDS.some(t => name.includes(textNorm(t)))) score += 360;
+  if(m.status === 'live') score += 140;
+  if(m.status === 'scheduled') score += 50;
+
+  // Esconde da home jogos de base, reservas e ligas regionais pequenas.
+  const smallWords = ['u20','u21','u23','sub 20','sub-20','youth','reserves','reserve','women','feminino','npl','state league','regional','county','amateur','ii'];
+  if(smallWords.some(w => name.includes(w))) score -= 520;
+  return score;
+}
+function sortMatchesPremium(list){
+  return [...list].sort((a,b)=>{
+    const diff = matchPriorityScore(b) - matchPriorityScore(a);
+    if(diff) return diff;
+    return String(a.date).localeCompare(String(b.date));
+  });
+}
+function mainMatches(list, max=6, minScore=700){
+  const sorted = sortMatchesPremium(list);
+  const important = sorted.filter(m => matchPriorityScore(m) >= minScore);
+  const selected = important.length ? important : sorted;
+  return selected.slice(0, max);
+}
+function groupedLeagueCodesPremium(byLeague){
+  return Object.keys(byLeague).sort((a,b)=>{
+    const sa = Math.max(...byLeague[a].map(matchPriorityScore));
+    const sb = Math.max(...byLeague[b].map(matchPriorityScore));
+    return sb - sa;
+  });
+}
+
 // ===================== HOME =====================
 function renderHome(){
-  const live = MATCHES.filter(m=>m.status==='live');
+  const liveAll = sortMatchesPremium(MATCHES.filter(m=>m.status==='live'));
+  const live = mainMatches(liveAll, 8, 650);
   const todayKey = todayYMD();
-  const todayAll = MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live');
-  const today = todayAll.slice(0,6);
-  const upcoming = MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled').slice(0,3);
-  const recent = MATCHES.filter(m=>m.status==='finished').slice(0,3);
+  const todayAll = sortMatchesPremium(MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live'));
+  const today = mainMatches(todayAll, 6, 650);
+  const upcomingAll = sortMatchesPremium(MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled'));
+  const upcoming = mainMatches(upcomingAll, 4, 650);
+  const recent = mainMatches(MATCHES.filter(m=>m.status==='finished'), 3, 650);
   const topPicks = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
 
   let html = '';
 
   // Live
-  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', live.length?`${live.length} jogos`:null);
+  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', liveAll.length?`${liveAll.length} jogos`:null);
   if(live.length){
     html += `<div class="hscroll">`;
     live.forEach(m=> html += liveCard(m));
@@ -426,7 +493,7 @@ function renderHome(){
   }
 
   // Today's games
-  html += sectionHead(PRADO_ICONS.calendar + 'Jogos de hoje', todayAll.length>6?'Ver todos':null, ()=>{ goToPage('more'); showMoreSub('calendar'); });
+  html += sectionHead(PRADO_ICONS.calendar + 'Jogos principais de hoje', todayAll.length>today.length?'Ver todos':null, ()=>{ goToPage('more'); showMoreSub('calendar'); });
   html += `<div class="card home-list-card">`;
   if(today.length) today.forEach(m=> html += matchRow(m));
   else html += emptyState(PRADO_ICONS.calendar,'Sem mais jogos hoje');
@@ -435,13 +502,15 @@ function renderHome(){
   // Upcoming
   html += sectionHead(PRADO_ICONS.next + 'Próximos jogos', 'Ver calendário', ()=>{ goToPage('more'); showMoreSub('calendar'); });
   html += `<div class="card home-list-card">`;
-  upcoming.forEach(m=> html += matchRow(m, true));
+  if(upcoming.length) upcoming.forEach(m=> html += matchRow(m, true));
+  else html += emptyState(PRADO_ICONS.calendar,'Sem próximos jogos principais');
   html += `</div>`;
 
   // Recent results
   html += sectionHead(PRADO_ICONS.chart + 'Resultados recentes', null);
   html += `<div class="card home-list-card">`;
-  recent.forEach(m=> html += matchRow(m));
+  if(recent.length) recent.forEach(m=> html += matchRow(m));
+  else html += emptyState(PRADO_ICONS.chart,'Sem resultados principais recentes');
   html += `</div>`;
 
   // Featured competitions
@@ -575,7 +644,7 @@ function renderLive(){
       <span style="margin-left:8px;cursor:pointer" onclick="liveLeagueFilter=null;renderLive()">✕</span></div></div>`;
   }
 
-  const list = filterMatches(state.liveFilter).filter(m=> !liveLeagueFilter || m.league===liveLeagueFilter);
+  const list = sortMatchesPremium(filterMatches(state.liveFilter).filter(m=> !liveLeagueFilter || m.league===liveLeagueFilter));
 
   // group by league
   const byLeague = {};
@@ -584,7 +653,7 @@ function renderLive(){
   if(Object.keys(byLeague).length===0){
     html += emptyState('📭','Nenhum jogo encontrado para esse filtro');
   } else {
-    Object.keys(byLeague).forEach(code=>{
+    groupedLeagueCodesPremium(byLeague).forEach(code=>{
       const lg = LEAGUES[code];
       html += `<div class="league-block">
         <div class="league-head">${crestHTML(code===code?code:code,22).replace('crest','crest')}
@@ -600,7 +669,7 @@ function renderLive(){
   // append league blocks properly (separate pass for clarity & correctness)
   if(Object.keys(byLeague).length){
     const container = document.getElementById('page-live');
-    Object.keys(byLeague).forEach(code=>{
+    groupedLeagueCodesPremium(byLeague).forEach(code=>{
       const lg = LEAGUES[code];
       const block = document.createElement('div');
       block.className = 'league-block';
@@ -855,7 +924,7 @@ function calFilter(id, el){
   document.getElementById('cal-list').innerHTML = calMatches(id);
 }
 function calMatches(filter){
-  const list = filterMatches(filter);
+  const list = sortMatchesPremium(filterMatches(filter));
   if(!list.length) return emptyState('📭','Nenhum jogo nesse período');
   return `<div class="card" style="padding:0 8px;margin-top:8px">${list.map(m=>matchRow(m,true)).join('')}</div>`;
 }
