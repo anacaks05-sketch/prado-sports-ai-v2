@@ -31,50 +31,56 @@ Hospede a pasta inteira em qualquer servidor estático (GitHub Pages, Vercel, Ne
 
 O app funciona offline (cache via `sw.js`) depois da primeira visita.
 
-## 🔌 Como conectar a uma API de futebol real (substituir os dados mockados)
+## 🔌 API de futebol real — API-Sports segura na Vercel
 
-Hoje todos os dados (jogos, times, rankings, notícias, odds, palpites) estão em `data.js`, no formato de objetos/arrays JavaScript estáticos. Para deixar o app 100% real, a ideia é **substituir esses dados estáticos por chamadas fetch() a uma API**, mantendo o mesmo "formato" (mesmas chaves) que `app.js` já espera.
+Esta versão já vem preparada para usar a **API-Football / API-Sports** sem expor sua chave no `index.html`.
 
-### Opção recomendada: API-Football (via RapidAPI)
-- Site: https://www.api-football.com/ (plano grátis: ~100 requisições/dia)
-- Cobre: Brasileirão A/B, Libertadores, Sul-Americana, Copa do Brasil, Champions, ligas europeias, Copa do Mundo, ao vivo minuto a minuto, escalações, estatísticas, odds.
+O app chama a rota:
 
-**Passo a passo:**
-1. Crie conta gratuita no RapidAPI e assine o plano free do "API-Football".
-2. Copie sua `X-RapidAPI-Key`.
-3. Em `data.js`, crie funções assíncronas que façam `fetch` aos endpoints, por exemplo:
-
-```js
-const API_KEY = "SUA_CHAVE_AQUI";
-const API_HOST = "api-football-v1.p.rapidapi.com";
-
-async function fetchLiveMatches() {
-  const res = await fetch("https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all", {
-    headers: {
-      "X-RapidAPI-Key": API_KEY,
-      "X-RapidAPI-Host": API_HOST
-    }
-  });
-  const json = await res.json();
-  return json.response.map(mapFixtureToMatch); // função que converte para o formato MATCHES
-}
+```txt
+/api/football
 ```
 
-4. Crie uma função `mapFixtureToMatch(fixture)` que converte a resposta da API para o mesmo formato que os objetos dentro de `MATCHES` em `data.js` (mesmos campos: `id`, `league`, `home`, `away`, `status`, `minute`, `score`, `stats`, `events`, `lineups`, etc.).
-5. Em `app.js`, troque os lugares que usam `MATCHES` diretamente por uma versão que primeiro tenta `await fetchLiveMatches()` e cai no mock como fallback (bom para desenvolvimento/offline).
-6. Repita o processo para:
-   - Classificações/rankings → endpoint `/standings` e `/players/topscorers`
-   - Odds → endpoint `/odds`
-   - Notícias → uma API de notícias separada (ex: NewsAPI, ou RSS de portais esportivos)
+Essa rota fica no arquivo:
 
-### Alternativa gratuita sem RapidAPI: football-data.org
-- Site: https://www.football-data.org/ (plano grátis com limite menor de ligas/requisições, mas sem precisar de RapidAPI).
-- Bom para começar com Premier League, Champions League, La Liga, Bundesliga, Serie A, Ligue 1, Brasileirão Série A.
+```txt
+api/football.js
+```
 
-### Palpites de IA (Prado IA)
-A IA de palpites pode continuar sendo gerada pelo próprio Claude/Anthropic:
-- Envie os dados reais do jogo (forma recente, H2H, escalações, odds) para a API da Anthropic (`/v1/messages`) pedindo uma análise estruturada em JSON com: probabilidades, confiança, mercados sugeridos e "motivos" (mesmo formato do array `PREDICTIONS` em `data.js`).
-- Assim o app mantém o mesmo card de "Confiança IA" e barras de probabilidade, só que com dados gerados dinamicamente.
+Ela consulta a API-Sports usando a chave secreta que você coloca na Vercel.
+
+### Como configurar na Vercel
+
+1. Entre no projeto na Vercel.
+2. Vá em **Settings → Environment Variables**.
+3. Crie esta variável:
+
+```txt
+Name: APISPORTS_KEY
+Value: cole aqui sua chave da API-Sports
+```
+
+4. Clique em **Save**.
+5. Faça **Redeploy** do projeto.
+
+Depois disso o app tenta carregar:
+
+- jogos ao vivo;
+- jogos de hoje;
+- próximos jogos;
+- ligas/times que vierem na resposta.
+
+Se a chave não estiver configurada, o app continua abrindo normalmente em modo demo.
+
+### Observação sobre plano grátis
+
+No arquivo `config.js`, deixei:
+
+```js
+DAYS_AHEAD: 3
+```
+
+Isso mostra hoje + próximos 3 dias e ajuda a economizar requisições durante os testes.
 
 ## 🔔 Notificações push
 O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá-las de verdade você precisará de:

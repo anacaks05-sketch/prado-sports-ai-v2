@@ -1,14 +1,15 @@
 /* =====================================================
-   PRADO SPORTS AI — Camada de API real
-   Converte API-Football para o mesmo formato que o app já usa.
+   PRADO SPORTS AI — Camada de API real segura
+   O app chama /api/football. A chave fica escondida na Vercel
+   como APISPORTS_KEY, não aparece no index.html.
 ===================================================== */
 
 const PradoAPI = (() => {
-  function headers(){
-    return {
-      'X-RapidAPI-Key': PRADO_CONFIG.API_KEY,
-      'X-RapidAPI-Host': PRADO_CONFIG.API_HOST
-    };
+  function proxyUrl(){
+    if(typeof PRADO_CONFIG !== 'undefined' && PRADO_CONFIG.API_PROXY_URL){
+      return String(PRADO_CONFIG.API_PROXY_URL || '/api/football');
+    }
+    return '/api/football';
   }
 
   function ymd(offset=0){
@@ -17,37 +18,61 @@ const PradoAPI = (() => {
     return d.toISOString().slice(0,10);
   }
 
-  async function apiGet(path){
-    const res = await fetch(`${PRADO_CONFIG.API_BASE_URL}${path}`, { headers: headers() });
-    if(!res.ok) throw new Error(`API erro ${res.status}`);
-    const json = await res.json();
+  function buildProxyUrl(endpoint, params={}){
+    const url = new URL(proxyUrl(), window.location.origin);
+    url.searchParams.set('endpoint', endpoint);
+    Object.entries(params).forEach(([key, value]) => {
+      if(value !== undefined && value !== null && value !== ''){
+        url.searchParams.set(key, value);
+      }
+    });
+    return url.toString();
+  }
+
+  async function apiGet(endpoint, params={}){
+    const res = await fetch(buildProxyUrl(endpoint, params), { cache: 'no-store' });
+    const json = await res.json().catch(() => ({}));
+
+    if(!res.ok){
+      const msg = json?.message || json?.error || `API erro ${res.status}`;
+      throw new Error(msg);
+    }
+
     if(json.errors && Object.keys(json.errors).length){
       console.warn('API errors:', json.errors);
     }
+
     return json.response || [];
   }
 
   async function fetchMatches(){
     const all = [];
+    const timezone = PRADO_CONFIG.TIMEZONE || 'America/Fortaleza';
 
     // Jogos ao vivo
     try{
-      const live = await apiGet('/fixtures?live=all');
+      const live = await apiGet('fixtures', { live: 'all', timezone });
       all.push(...live);
     }catch(e){ console.warn('Falha ao buscar ao vivo:', e); }
 
     // Hoje + próximos dias
-    for(let i=0; i<=Number(PRADO_CONFIG.DAYS_AHEAD || 7); i++){
+    const days = Math.max(0, Math.min(7, Number(PRADO_CONFIG.DAYS_AHEAD || 3)));
+    for(let i=0; i<=days; i++){
       try{
-        const day = await apiGet(`/fixtures?date=${ymd(i)}&timezone=${encodeURIComponent(PRADO_CONFIG.TIMEZONE || 'America/Fortaleza')}`);
+        const day = await apiGet('fixtures', { date: ymd(i), timezone });
         all.push(...day);
       }catch(e){ console.warn('Falha ao buscar dia', i, e); }
     }
 
-    // remove duplicados
+    // Remove duplicados
     const byId = new Map();
-    all.forEach(item => byId.set(item.fixture.id, item));
-    return [...byId.values()].map(mapFixtureToMatch).sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+    all.forEach(item => {
+      if(item?.fixture?.id) byId.set(item.fixture.id, item);
+    });
+
+    return [...byId.values()]
+      .map(mapFixtureToMatch)
+      .sort((a,b)=> String(a.date).localeCompare(String(b.date)));
   }
 
   function mapStatus(short){
@@ -57,32 +82,32 @@ const PradoAPI = (() => {
   }
 
   function codeFromTeam(team){
-    const base = String(team.name || 'TIME').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    return base.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() + String(team.id).slice(-2);
+    const base = String(team?.name || 'TIME').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return base.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() + String(team?.id || '').slice(-2);
   }
 
   function upsertTeam(team){
     const code = codeFromTeam(team);
     if(!TEAMS[code]){
       TEAMS[code] = {
-        name: team.name,
+        name: team?.name || 'Time',
         color: '#21E6A1',
-        logo: team.logo || ''
+        logo: team?.logo || ''
       };
     }
     return code;
   }
 
   function leagueCode(league){
-    const code = String(league.name || 'Liga').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-      .replace(/[^A-Za-z]/g,'').slice(0,8).toUpperCase() + String(league.id).slice(-3);
+    const code = String(league?.name || 'Liga').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^A-Za-z]/g,'').slice(0,8).toUpperCase() + String(league?.id || '').slice(-3);
     if(!LEAGUES[code]){
       LEAGUES[code] = {
-        name: league.name || 'Liga',
-        country: league.country || '',
-        icon: '🏆',
+        name: league?.name || 'Liga',
+        country: league?.country || '',
+        icon: league?.country === 'Brazil' ? '🇧🇷' : '🏆',
         color: '#21E6A1',
-        logo: league.logo || ''
+        logo: league?.logo || ''
       };
     }
     return code;
@@ -130,9 +155,9 @@ const PradoAPI = (() => {
           {label:'Ambas marcam', type:'gold'}
         ],
         reasons:[
-          'Análise inicial gerada com base nos dados disponíveis da API.',
-          'Para IA real, conecte um backend com dados de forma recente, odds e escalações.',
-          'Este card já está no formato certo para receber uma análise premium.'
+          'Jogo carregado da API-Sports em tempo real.',
+          'A próxima etapa é conectar odds e estatísticas avançadas para melhorar a confiança da IA.',
+          'Este card já está pronto para receber análise premium mais completa.'
         ]
       };
     });

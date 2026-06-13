@@ -1,17 +1,17 @@
-const CACHE_NAME = "prado-sports-ai-v8-premium-sheet";
+const CACHE_NAME = "prado-sports-ai-v8-api-secure";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
-  "./style.css?v=premium-sheet-20260613",
+  "./style.css?v=api-secure-20260613",
   "./data.js",
-  "./data.js?v=premium-sheet-20260613",
+  "./data.js?v=api-secure-20260613",
   "./config.js",
-  "./config.js?v=premium-sheet-20260613",
+  "./config.js?v=api-secure-20260613",
   "./api.js",
-  "./api.js?v=premium-sheet-20260613",
+  "./api.js?v=api-secure-20260613",
   "./app.js",
-  "./app.js?v=premium-sheet-20260613",
+  "./app.js?v=api-secure-20260613",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -41,6 +41,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+
+  const url = new URL(req.url);
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('googleusercontent.com') || url.hostname.includes('google.com')) {
+    event.respondWith(fetch(req));
+    return;
+  }
 
   // HTML primeiro pela rede para evitar que o celular fique preso em versão antiga após publicar.
   if (req.mode === "navigate") {

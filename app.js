@@ -315,8 +315,8 @@ async function loadRealDataIfConfigured(){
   status.style.cssText = 'display:none;position:fixed;top:78px;left:14px;right:14px;z-index:99;background:rgba(19,27,38,.95);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;color:var(--text);font-size:13px;box-shadow:0 12px 30px rgba(0,0,0,.35)';
   document.body.appendChild(status);
 
-  if (typeof PRADO_CONFIG === 'undefined' || !PRADO_CONFIG.API_KEY || PRADO_CONFIG.API_KEY.includes('COLE_SUA')) {
-    console.info('Prado Sports AI: sem chave API configurada, usando dados demo.');
+  if (typeof PRADO_CONFIG === 'undefined' || !PRADO_CONFIG.API_PROXY_URL) {
+    console.info('Prado Sports AI: rota segura da API não configurada, usando dados demo.');
     return;
   }
 
@@ -336,7 +336,7 @@ async function loadRealDataIfConfigured(){
     }
   }catch(err){
     console.error('Erro ao carregar API:', err);
-    status.textContent = '⚠️ Não consegui carregar sua API. Confira a chave em config.js. O app ficou no modo demo.';
+    status.textContent = '⚠️ Não consegui carregar a API. Confira a variável APISPORTS_KEY na Vercel. O app ficou no modo demo.';
     setTimeout(()=> status.style.display='none', 4500);
   }
 }
