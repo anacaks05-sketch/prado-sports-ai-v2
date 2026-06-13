@@ -1,12 +1,17 @@
-const CACHE_NAME = "prado-sports-ai-v3-final";
+const CACHE_NAME = "prado-sports-ai-v4-mobile-fit";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
+  "./style.css?v=mobile-fit-20260613",
   "./data.js",
+  "./data.js?v=mobile-fit-20260613",
   "./config.js",
+  "./config.js?v=mobile-fit-20260613",
   "./api.js",
+  "./api.js?v=mobile-fit-20260613",
   "./app.js",
+  "./app.js?v=mobile-fit-20260613",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -35,26 +40,34 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-
   if (req.method !== "GET") return;
+
+  // HTML primeiro pela rede para evitar que o celular fique preso em versão antiga após publicar.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", clone));
+          return res;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
-
       return fetch(req)
         .then((res) => {
-          if (res && res.status === 200 && res.type === "basic") {
+          if (res && res.status === 200 && (res.type === "basic" || res.type === "cors")) {
             const resClone = res.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
           }
           return res;
         })
-        .catch(() => {
-          if (req.mode === "navigate") {
-            return caches.match("./index.html");
-          }
-        });
+        .catch(() => undefined);
     })
   );
 });

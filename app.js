@@ -130,8 +130,8 @@ function renderHome(){
   const live = MATCHES.filter(m=>m.status==='live');
   const todayKey = todayYMD();
   const today = MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live');
-  const upcoming = MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled').slice(0,4);
-  const recent = MATCHES.filter(m=>m.status==='finished').slice(0,4);
+  const upcoming = MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled').slice(0,3);
+  const recent = MATCHES.filter(m=>m.status==='finished').slice(0,3);
   const topPicks = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
 
   let html = '';
@@ -148,20 +148,20 @@ function renderHome(){
 
   // Today's games
   html += sectionHead(PRADO_ICONS.calendar + 'Jogos de hoje', null);
-  html += `<div class="card">`;
+  html += `<div class="card home-list-card">`;
   if(today.length) today.forEach(m=> html += matchRow(m));
   else html += emptyState(PRADO_ICONS.calendar,'Sem mais jogos hoje');
   html += `</div>`;
 
   // Upcoming
   html += sectionHead(PRADO_ICONS.next + 'Próximos jogos', 'Ver calendário', ()=>{ goToPage('more'); showMoreSub('calendar'); });
-  html += `<div class="card">`;
+  html += `<div class="card home-list-card">`;
   upcoming.forEach(m=> html += matchRow(m, true));
   html += `</div>`;
 
   // Recent results
   html += sectionHead(PRADO_ICONS.chart + 'Resultados recentes', null);
-  html += `<div class="card">`;
+  html += `<div class="card home-list-card">`;
   recent.forEach(m=> html += matchRow(m));
   html += `</div>`;
 

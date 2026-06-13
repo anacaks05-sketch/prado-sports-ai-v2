@@ -773,3 +773,152 @@ body{ background:radial-gradient(700px 420px at 50% -140px, rgba(34,245,167,.11)
   .detail-scoreboard{ transform:scale(.90); margin-bottom:-16px; }
   .detail-head > div{ font-size:11.5px!important; }
 }
+
+
+/* ===================== PRADO MOBILE FIT PATCH — 13/06 =====================
+   Ajusta a tela inicial para caber melhor no iPhone, remove vazamento lateral
+   e garante espaço livre acima da barra inferior fixa.
+===================================================== */
+html,
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden!important;
+  background-color:#050B14;
+}
+body{
+  min-height:100svh;
+  min-height:100dvh;
+}
+#app{
+  width:100%;
+  max-width:480px;
+  overflow-x:hidden!important;
+  min-height:100svh;
+  min-height:100dvh;
+  isolation:isolate;
+}
+main{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden!important;
+  flex:1 1 auto;
+}
+.page{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden!important;
+  padding-left:max(12px, env(safe-area-inset-left))!important;
+  padding-right:max(12px, env(safe-area-inset-right))!important;
+  padding-bottom:calc(108px + env(safe-area-inset-bottom))!important;
+  scroll-padding-bottom:calc(108px + env(safe-area-inset-bottom))!important;
+}
+.topbar{
+  width:100%;
+  max-width:480px;
+  margin:0 auto;
+  padding-left:max(14px, env(safe-area-inset-left))!important;
+  padding-right:max(14px, env(safe-area-inset-right))!important;
+}
+.logo > div:last-child{ min-width:0; }
+.logo-text,
+.logo-sub{
+  max-width:calc(100vw - 116px);
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#page-home .section-head{ margin:12px 0 8px!important; }
+#page-home .section-head:first-child{ margin-top:2px!important; }
+#page-home .section-title{ font-size:14.5px!important; line-height:1.15; }
+#page-home .section-link{ font-size:11.5px; white-space:nowrap; }
+#page-home .hscroll{
+  width:calc(100% + 12px);
+  max-width:none;
+  margin-right:-12px;
+  padding-right:12px;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#page-home .live-card{
+  flex:0 0 clamp(148px, 42vw, 158px)!important;
+  min-width:0;
+  min-height:124px;
+}
+#page-home .live-card .league-tag,
+#page-home .live-card .team-info,
+#page-home .live-meta span:last-child{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#page-home .live-card .team-info{ max-width:112px; }
+#page-home .live-meta span:last-child{ max-width:72px; }
+#page-home .home-list-card{ border-radius:18px!important; }
+#page-home .home-list-card .match-row{
+  min-height:50px!important;
+  padding:7px 4px!important;
+  gap:7px!important;
+}
+#page-home .home-list-card .match-time{
+  width:39px!important;
+  flex:0 0 39px!important;
+  font-size:10.5px!important;
+  line-height:1.2;
+}
+#page-home .home-list-card .match-time .min{ font-size:9.5px!important; }
+#page-home .home-list-card .match-teams .t{
+  font-size:12px!important;
+  padding:1px 0!important;
+  gap:6px!important;
+}
+#page-home .home-list-card .match-score{ font-size:13px!important; }
+#page-home .home-list-card .match-extra{ font-size:20px!important; padding-left:2px; }
+#page-home .crest{
+  width:20px!important;
+  height:20px!important;
+  flex-basis:20px!important;
+  font-size:9px!important;
+  border-radius:6px!important;
+}
+.bottom-nav{
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:480px;
+  padding-left:max(0px, env(safe-area-inset-left));
+  padding-right:max(0px, env(safe-area-inset-right));
+}
+.detail-overlay,
+#search-overlay,
+#splash-screen{
+  width:100%;
+  max-width:480px;
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%) translateY(100%);
+  overflow-x:hidden!important;
+}
+#splash-screen{
+  transform:translateX(-50%);
+}
+#splash-screen.hide{
+  transform:translateX(-50%) scale(1.02)!important;
+}
+.detail-overlay.open,
+#search-overlay.open{
+  transform:translateX(-50%) translateY(0)!important;
+}
+.detail-overlay{
+  transform:translateX(-50%) translateY(100%)!important;
+}
+.search-panel{ padding-left:max(14px, env(safe-area-inset-left))!important; padding-right:max(14px, env(safe-area-inset-right))!important; }
+@media(max-width:380px){
+  #page-home .live-card{ flex-basis:144px!important; min-height:118px; }
+  #page-home .home-list-card .match-row{ min-height:48px!important; }
+  #page-home .section-title{ font-size:14px!important; }
+  .logo-text{ font-size:13.2px!important; }
+}

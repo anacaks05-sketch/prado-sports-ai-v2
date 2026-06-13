@@ -103,3 +103,11 @@ O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá
 
 ---
 Feito com ⚽ + 🤖 — Prado Sports AI
+
+
+## Ajuste mobile final (13/06)
+
+- Tela inicial compactada para caber melhor no iPhone.
+- Corrigido vazamento lateral/horizontal.
+- Adicionado espaço extra para a barra inferior não cobrir jogos.
+- Service Worker atualizado para evitar cache antigo após publicar.
