@@ -6,6 +6,7 @@ const state = {
   page: 'home',
   rankTab: 'scorers',
   liveFilter: 'live',
+  newsTab: 'highlights',
   favTeam: localStorage.getItem('prado_fav_team') || '',
   favLeague: localStorage.getItem('prado_fav_league') || '',
   favMatches: JSON.parse(localStorage.getItem('prado_fav_matches') || '[]'),
@@ -90,7 +91,7 @@ function bindNav(){
   });
   const themeBtn = document.getElementById('theme-btn');
   if(themeBtn) themeBtn.addEventListener('click', toggleTheme);
-  document.getElementById('search-btn').addEventListener('click', ()=> toast('Busca por times, jogadores e ligas — em breve 🔎','🔍'));
+  document.getElementById('search-btn').addEventListener('click', openSearch);
 }
 function goToPage(page){
   state.page = page;
@@ -119,12 +120,6 @@ function renderHome(){
   const topPicks = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
 
   let html = '';
-
-  html += `<div class="install-banner" id="home-install" style="display:none">
-    <div class="ib-icon">📲</div>
-    <div><b>Instale o Prado Sports AI</b><span>Acesse como app na tela inicial, sem precisar da loja</span></div>
-    <button id="home-install-btn">Instalar</button>
-  </div>`;
 
   // Live
   html += sectionHead('🔴 Ao vivo agora', live.length?`${live.length} jogos`:null);
@@ -177,17 +172,8 @@ function renderHome(){
   });
   html += `</div>`;
 
-  // News
-  html += sectionHead('📰 Notícias de futebol', null);
-  html += `<div class="card" style="padding:0 10px">`;
-  NEWS.slice(0,5).forEach(n=> html += newsCard(n));
-  html += `</div>`;
-
   document.getElementById('page-home').innerHTML = html;
 
-  const ib = document.getElementById('home-install');
-  if(window.deferredInstallPrompt || isIOS()){ ib.style.display='flex'; }
-  document.getElementById('home-install-btn').addEventListener('click', triggerInstall);
 }
 
 function sectionHead(title, linkLabel, onClick){
@@ -437,23 +423,36 @@ function renderRankings(){
 }
 
 function renderFootballNews(){
+  const tabs = [
+    {id:'highlights', label:'🔥 Destaques'},
+    {id:'brasileirao', label:'⚽ Brasileirão'},
+    {id:'europa', label:'🌍 Europa'},
+    {id:'mercado', label:'💰 Mercado'},
+  ];
+  const allNews = NEWS.map((n,i)=> ({...n, cat: i===1?'mercado': i===2||i===3?'brasileirao': i===4?'brasileirao':'highlights'}));
+  const extra = [
+    {icon:'🏆', tag:'BRASILEIRÃO', title:'Rodada tem clássicos decisivos e disputa forte no G4', time:'agora', cat:'brasileirao'},
+    {icon:'🇪🇺', tag:'EUROPA', title:'Clubes europeus monitoram jovens promessas do futebol brasileiro', time:'há 18 min', cat:'europa'},
+    {icon:'💰', tag:'MERCADO', title:'Mercado da bola esquenta com sondagens por atacantes', time:'há 44 min', cat:'mercado'},
+    {icon:'⭐', tag:'EUROPA', title:'Champions League prepara rodada com favoritos em campo', time:'há 1 h', cat:'europa'},
+  ];
+  const list = [...allNews, ...extra].filter(n => state.newsTab==='highlights' ? true : n.cat===state.newsTab);
+
   let html = `<div class="section-head" style="margin-top:4px"><div class="section-title display">📰 Notícias do futebol</div></div>`;
   html += `<div class="news-hero card">
     <div class="news-hero-badge">Atualizações</div>
     <div class="news-hero-title">Tudo do futebol em uma aba só</div>
-    <div class="news-hero-sub">Mercado da bola, jogos importantes, bastidores e alertas do Prado Sports AI.</div>
+    <div class="news-hero-sub">Destaques, Brasileirão, Europa e mercado da bola organizados por categoria.</div>
   </div>`;
-  html += `<div class="chip-row" style="margin:12px 0 8px">
-    <div class="chip active">🔥 Destaques</div>
-    <div class="chip">⚽ Brasileirão</div>
-    <div class="chip">🌍 Europa</div>
-    <div class="chip">💰 Mercado</div>
-  </div>`;
+  html += `<div class="chip-row news-tabs" style="margin:12px 0 8px">`;
+  tabs.forEach(t=> html += `<div class="chip ${state.newsTab===t.id?'active':''}" onclick="setNewsTab('${t.id}')">${t.label}</div>`);
+  html += `</div>`;
   html += `<div class="card news-list" style="padding:4px 10px;margin-top:8px">`;
-  NEWS.forEach(n=> html += newsCard(n));
+  list.forEach(n=> html += newsCard(n));
   html += `</div>`;
   document.getElementById('page-rank').innerHTML = html;
 }
+function setNewsTab(id){ state.newsTab = id; renderFootballNews(); }
 function setRankTab(id){ state.rankTab = id; renderRankings(); }
 
 // ===================== MAIS (MENU) =====================
@@ -479,7 +478,6 @@ function renderMore(){
   html += menuSection('Conta', [
     {icon:'🔔', label:'Notificações', action:`showMoreSub('notifications')`},
     {icon:'⚙️', label:'Configurações', action:`showMoreSub('settings')`},
-    {icon:'📱', label:'Instalar aplicativo', action:`showMoreSub('install')`},
     {icon:'ℹ️', label:'Sobre o Prado Sports AI', action:`showMoreSub('about')`},
   ]);
 
@@ -628,20 +626,26 @@ function setFavTeam(code){ state.favTeam=code; localStorage.setItem('prado_fav_t
 
 // ---- Premium ----
 function renderPremiumSub(){
-  return `<div class="card" style="padding:16px;margin-bottom:14px;background:var(--grad-gold);color:#2A1700">
-    <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px">Prado Sports AI Premium</div>
-    <div style="font-size:12.5px;margin-top:6px;opacity:.85">Desbloqueie a inteligência completa do app</div>
+  return `<div class="premium-hero">
+    <div class="premium-pill">💎 Plano configurável</div>
+    <div class="premium-title">Prado Sports AI Premium</div>
+    <div class="premium-sub">Tela pronta para publicar. Depois você só troca preço, link de pagamento e benefícios.</div>
+  </div>
+  <div class="premium-grid">
+    <button class="premium-mini" onclick="showMoreSub('scanner')">🔎 Scanner</button>
+    <button class="premium-mini" onclick="showMoreSub('simulator')">📈 Simulador</button>
+    <button class="premium-mini" onclick="showMoreSub('notifications')">🔔 Alertas</button>
   </div>
   ${menuSection('O que está incluso', [
-    {icon:'🤖', label:'IA avançada com explicações detalhadas'},
-    {icon:'🎟️', label:'Bilhetes prontos diários com odds combinadas'},
-    {icon:'🔔', label:'Alertas automáticos de oportunidades'},
-    {icon:'📊', label:'Estatísticas avançadas (xG, xA, heatmaps)'},
-    {icon:'📈', label:'Simulador de apostas ilimitado'},
-    {icon:'🔎', label:'Scanner de valor em tempo real'},
-    {icon:'🧮', label:'Jogos filtrados por oportunidade de valor'},
-  ].map(i=>({...i, action:''})))}
-  <div class="btn primary" style="padding:14px;margin-top:6px" onclick="toast('Plano Premium em breve — fique de olho nas novidades! 🚀','💎')">Assinar Premium</div>`;
+    {icon:'🤖', label:'IA avançada com explicações detalhadas', action:`showMoreSub('premium')`},
+    {icon:'🎟️', label:'Bilhetes prontos diários com odds combinadas', action:`toast('Bilhetes premium prontos para conectar ao pagamento.','🎟️')`},
+    {icon:'🔔', label:'Alertas automáticos de oportunidades', action:`showMoreSub('notifications')`},
+    {icon:'📊', label:'Estatísticas avançadas (xG, xA, heatmaps)', action:`toast('Estatísticas avançadas prontas no detalhe da partida.','📊')`},
+    {icon:'📈', label:'Simulador de apostas ilimitado', action:`showMoreSub('simulator')`},
+    {icon:'🔎', label:'Scanner de valor em tempo real', action:`showMoreSub('scanner')`},
+    {icon:'🧮', label:'Jogos filtrados por oportunidade de valor', action:`showMoreSub('scanner')`},
+  ])}
+  <div class="btn primary" style="padding:14px;margin-top:6px" onclick="toast('Configure seu checkout/link de pagamento aqui.','💎')">Assinar Premium</div>`;
 }
 
 // ---- Simulator ----
@@ -677,23 +681,33 @@ function updateSimulator(){
 
 // ---- Value scanner ----
 function renderScannerSub(){
-  let h = `<div class="card" style="padding:10px 12px;margin-bottom:12px;background:var(--grad-card)">
-    <div style="font-size:12px;color:var(--text-dim);line-height:1.5">A IA compara a <b style="color:var(--text)">probabilidade estimada</b> com a <b style="color:var(--text)">probabilidade implícita pelas odds</b> para encontrar oportunidades de valor.</div>
+  let valueCount = 0;
+  let h = `<div class="card scanner-intro">
+    <div class="scanner-title">🔎 Scanner de valor</div>
+    <div class="scanner-sub">A IA compara probabilidades estimadas com odds do mercado e marca quando existe vantagem.</div>
   </div>`;
+  h += `<div class="scanner-toolbar"><span>Oportunidades encontradas</span><b id="scanner-count">0</b></div>`;
   ODDS.forEach(o=>{
     const m = MATCHES.find(x=>x.id===o.matchId);
     const p = PREDICTIONS.find(x=>x.matchId===o.matchId);
-    const impliedHome = 100/o.now.h;
-    const diff = p.probs.home - impliedHome;
-    const isValue = diff > 3;
-    h += `<div class="card" style="padding:12px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-weight:700;font-size:13px">${teamName(m.home)} x ${teamName(m.away)}</div>
-        ${isValue ? '<span class="market-tag">VALOR ✅</span>' : '<span class="market-tag" style="background:var(--surface-2);color:var(--text-faint)">Sem valor</span>'}
-      </div>
-      <div style="font-size:12px;color:var(--text-dim)">IA: <b style="color:var(--text)">${p.probs.home}%</b> · Mercado: <b style="color:var(--text)">${impliedHome.toFixed(1)}%</b> · Diferença: <b style="color:${isValue?'var(--accent)':'var(--text-faint)'}">${diff>0?'+':''}${diff.toFixed(1)}pp</b></div>
+    const markets = [
+      {label: teamName(m.home), prob:p.probs.home, odd:o.now.h},
+      {label:'Empate', prob:p.probs.draw, odd:o.now.d},
+      {label: teamName(m.away), prob:p.probs.away, odd:o.now.a},
+    ].map(x=> ({...x, implied:100/x.odd, diff:x.prob-(100/x.odd)})).sort((a,b)=>b.diff-a.diff);
+    const best = markets[0];
+    const isValue = best.diff > 3;
+    if(isValue) valueCount++;
+    h += `<div class="card scanner-card ${isValue?'has-value':''}">
+      <div class="scanner-top"><div><b>${teamName(m.home)} x ${teamName(m.away)}</b><small>${leagueOf(m).icon} ${leagueOf(m).name}</small></div>${isValue ? '<span class="market-tag">VALOR ✅</span>' : '<span class="market-tag muted">Sem valor</span>'}</div>
+      <div class="scanner-line"><span>Melhor mercado</span><b>${best.label}</b></div>
+      <div class="scanner-line"><span>IA</span><b>${best.prob}%</b></div>
+      <div class="scanner-line"><span>Mercado</span><b>${best.implied.toFixed(1)}%</b></div>
+      <div class="scanner-line"><span>Diferença</span><b style="color:${isValue?'var(--accent)':'var(--text-faint)'}">${best.diff>0?'+':''}${best.diff.toFixed(1)}pp</b></div>
+      <button class="btn ghost scanner-btn" onclick="openMatchDetail('${m.id}','ai')">📊 Ver análise</button>
     </div>`;
   });
+  setTimeout(()=>{ const c=document.getElementById('scanner-count'); if(c) c.textContent=valueCount; },0);
   return h;
 }
 
@@ -705,7 +719,12 @@ const NOTIF_FEED = [
   {icon:'🏁', text:'Fim de jogo: Atlético-MG 1x0 Fluminense', time:'há 3h'},
 ];
 function renderNotificationsSub(){
-  let h = `<div class="menu-label">Tipos de alerta</div><div class="card" style="padding:0 12px;margin-bottom:16px">`;
+  const permission = ('Notification' in window) ? Notification.permission : 'unsupported';
+  let h = `<div class="card notif-permission">
+    <div><b>🔔 Notificações do Prado</b><span>Status: ${permission==='granted'?'ativadas':permission==='denied'?'bloqueadas':'aguardando permissão'}</span></div>
+    <button class="btn primary" onclick="enableNotifications()">Ativar</button>
+  </div>`;
+  h += `<div class="menu-label">Tipos de alerta</div><div class="card" style="padding:0 12px;margin-bottom:16px">`;
   const items = [
     {key:'gol', label:'Gols', sub:'Alerta imediato a cada gol marcado'},
     {key:'cartao', label:'Cartões', sub:'Amarelos e vermelhos em jogos favoritos'},
@@ -721,11 +740,27 @@ function renderNotificationsSub(){
     </div>`;
   });
   h += `</div>`;
-
+  h += `<button class="btn ghost" style="margin-bottom:14px" onclick="sendTestNotification()">Enviar teste</button>`;
   h += `<div class="menu-label">Recentes</div><div class="card" style="padding:0 10px">`;
   NOTIF_FEED.forEach(n=> h += `<div class="news-card"><div class="news-thumb" style="font-size:20px">${n.icon}</div><div class="news-body"><div class="news-title">${n.text}</div><div class="news-meta">há ${n.time}</div></div></div>`);
   h += `</div>`;
   return h;
+}
+
+function enableNotifications(){
+  if(!('Notification' in window)){ toast('Este navegador não suporta notificações.','⚠️'); return; }
+  Notification.requestPermission().then(status=>{
+    toast(status==='granted' ? 'Notificações ativadas com sucesso!' : 'Permissão não liberada no navegador.', status==='granted'?'🔔':'⚠️');
+    renderMoreSub('notifications');
+  });
+}
+function sendTestNotification(){
+  if('Notification' in window && Notification.permission==='granted'){
+    new Notification('Prado Sports AI', { body:'Teste de alerta funcionando ✅', icon:'./icons/icon-192.png' });
+    toast('Notificação de teste enviada.','🔔');
+  } else {
+    toast('Ative as notificações primeiro.','🔔');
+  }
 }
 function bindNotifSwitches(){
   document.querySelectorAll('[data-notif]').forEach(el=>{
@@ -1097,6 +1132,45 @@ function detailH2H(m){
   });
   h += `</div>`;
   return h;
+}
+
+
+// ===================== SEARCH =====================
+function openSearch(){
+  let overlay = document.getElementById('search-overlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'search-overlay';
+    overlay.innerHTML = `<div class="search-panel">
+      <div class="search-head"><button class="icon-btn" onclick="closeSearch()">←</button><input id="search-input" placeholder="Buscar time, jogo, liga ou notícia..." autocomplete="off"></div>
+      <div id="search-results" class="search-results"></div>
+    </div>`;
+    document.getElementById('app').appendChild(overlay);
+  }
+  overlay.classList.add('open');
+  const input = document.getElementById('search-input');
+  input.value = '';
+  renderSearchResults('');
+  input.focus();
+  input.oninput = () => renderSearchResults(input.value);
+}
+function closeSearch(){ document.getElementById('search-overlay')?.classList.remove('open'); }
+function renderSearchResults(q){
+  const term = (q||'').toLowerCase().trim();
+  const results = [];
+  MATCHES.forEach(m=>{
+    const text = `${teamName(m.home)} ${teamName(m.away)} ${leagueOf(m).name}`.toLowerCase();
+    if(!term || text.includes(term)) results.push({type:'match', label:`${teamName(m.home)} x ${teamName(m.away)}`, sub:`${leagueOf(m).icon} ${leagueOf(m).name} · ${fmtDate(m.date)} ${fmtTime(m.date)}`, id:m.id});
+  });
+  NEWS.forEach((n,i)=>{
+    const text = `${n.tag} ${n.title}`.toLowerCase();
+    if(term && text.includes(term)) results.push({type:'news', label:n.title, sub:`${n.tag} · ${n.time}`, id:i});
+  });
+  const html = results.slice(0,12).map(r=> r.type==='match'
+    ? `<div class="search-item" onclick="closeSearch();openMatchDetail('${r.id}')"><b>⚽ ${r.label}</b><span>${r.sub}</span></div>`
+    : `<div class="search-item" onclick="closeSearch();goToPage('rank')"><b>📰 ${r.label}</b><span>${r.sub}</span></div>`
+  ).join('') || emptyState('🔎','Nada encontrado');
+  document.getElementById('search-results').innerHTML = html;
 }
 
 // ===================== PWA INSTALL =====================

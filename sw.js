@@ -1,4 +1,4 @@
-const CACHE_NAME = "prado-sports-ai-v2";
+const CACHE_NAME = "prado-sports-ai-v3-final";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
