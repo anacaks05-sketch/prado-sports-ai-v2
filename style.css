@@ -817,3 +817,66 @@ main,
 .page.active {
   padding-top: 18px !important;
 }
+/* ===== TOPO CORRIGIDO IPHONE - PRADO SPORTS AI ===== */
+
+:root{
+  --topbar-h: 82px;
+}
+
+body{
+  padding-top: env(safe-area-inset-top);
+}
+
+#app{
+  padding-top: 0 !important;
+}
+
+.topbar{
+  height: 82px !important;
+  padding: 18px 14px 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.logo{
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.logo-mark{
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  border-radius: 12px !important;
+  font-size: 17px !important;
+}
+
+.logo-text{
+  font-size: 16px !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+}
+
+.logo-sub{
+  font-size: 9px !important;
+  margin-top: 3px !important;
+}
+
+.topbar-actions{
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.icon-btn{
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+}
+
+main{
+  padding-top: 10px !important;
+}
