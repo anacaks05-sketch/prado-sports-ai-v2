@@ -96,6 +96,18 @@ O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá
 | Notificações push reais | Estrutura pronta, requer backend |
 | Apps nativos iOS/Android | Fora do escopo (use o PWA) |
 
+## 💎 Prado Premium / Pagamento
+
+O botão **Assinar Premium** já está configurado para abrir o checkout do Mercado Pago:
+
+- Plano: Prado Sports AI Premium
+- Preço exibido: R$ 19,90/mês
+- Checkout: https://mpago.la/1mg8mFi
+- Suporte/liberação manual: WhatsApp +55 98 98235-6674
+
+Fluxo atual: cliente paga no Mercado Pago → envia comprovante pelo WhatsApp → acesso premium é liberado manualmente.
+Para liberar automaticamente no futuro, será necessário adicionar login, banco de dados e webhook do Mercado Pago.
+
 ## 🎨 Identidade visual
 - Paleta "Pitch Night": fundo `#070B11`, superfícies `#131B26`, verde "confiança" `#21E6A1`, dourado das odds `#FFB23E`, vermelho ao vivo `#FF4757`.
 - Tipografia: Space Grotesk (placares/títulos), Inter (texto), JetBrains Mono (dados/odds/cronômetro).
@@ -103,11 +115,3 @@ O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá
 
 ---
 Feito com ⚽ + 🤖 — Prado Sports AI
-
-
-## Ajuste mobile final (13/06)
-
-- Tela inicial compactada para caber melhor no iPhone.
-- Corrigido vazamento lateral/horizontal.
-- Adicionado espaço extra para a barra inferior não cobrir jogos.
-- Service Worker atualizado para evitar cache antigo após publicar.

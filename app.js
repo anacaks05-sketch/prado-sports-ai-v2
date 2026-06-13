@@ -16,6 +16,23 @@ const state = {
   })),
 };
 
+const PRADO_PAYMENT_CONFIG = {
+  planName: 'Prado Sports AI Premium',
+  price: 'R$ 19,90/mês',
+  checkoutUrl: 'https://mpago.la/1mg8mFi',
+  whatsapp: '5598982356674',
+  whatsappMessage: 'Olá, acabei de assinar o Prado Sports AI Premium e quero liberar meu acesso.'
+};
+
+function openPremiumCheckout(){
+  window.open(PRADO_PAYMENT_CONFIG.checkoutUrl, '_blank', 'noopener,noreferrer');
+}
+
+function openPremiumSupport(){
+  const message = encodeURIComponent(PRADO_PAYMENT_CONFIG.whatsappMessage);
+  window.open(`https://wa.me/${PRADO_PAYMENT_CONFIG.whatsapp}?text=${message}`, '_blank', 'noopener,noreferrer');
+}
+
 
 
 
@@ -642,9 +659,10 @@ function setFavTeam(code){ state.favTeam=code; localStorage.setItem('prado_fav_t
 // ---- Premium ----
 function renderPremiumSub(){
   return `<div class="premium-hero">
-    <div class="premium-pill">💎 Plano configurável</div>
-    <div class="premium-title">Prado Sports AI Premium</div>
-    <div class="premium-sub">Tela pronta para publicar. Depois você só troca preço, link de pagamento e benefícios.</div>
+    <div class="premium-pill">💎 Plano ativo</div>
+    <div class="premium-title">${PRADO_PAYMENT_CONFIG.planName}</div>
+    <div class="premium-price">${PRADO_PAYMENT_CONFIG.price}</div>
+    <div class="premium-sub">Assinatura via Mercado Pago com Pix/cartão. Depois do pagamento, envie o comprovante no WhatsApp para liberar o acesso premium.</div>
   </div>
   <div class="premium-grid">
     <button class="premium-mini" onclick="showMoreSub('scanner')">🔎 Scanner</button>
@@ -653,14 +671,18 @@ function renderPremiumSub(){
   </div>
   ${menuSection('O que está incluso', [
     {icon:'🤖', label:'IA avançada com explicações detalhadas', action:`showMoreSub('premium')`},
-    {icon:'🎟️', label:'Bilhetes prontos diários com odds combinadas', action:`toast('Bilhetes premium prontos para conectar ao pagamento.','🎟️')`},
+    {icon:'🎟️', label:'Bilhetes prontos diários com odds combinadas', action:`toast('Bilhetes premium disponíveis após liberação do acesso.','🎟️')`},
     {icon:'🔔', label:'Alertas automáticos de oportunidades', action:`showMoreSub('notifications')`},
     {icon:'📊', label:'Estatísticas avançadas (xG, xA, heatmaps)', action:`toast('Estatísticas avançadas prontas no detalhe da partida.','📊')`},
     {icon:'📈', label:'Simulador de apostas ilimitado', action:`showMoreSub('simulator')`},
     {icon:'🔎', label:'Scanner de valor em tempo real', action:`showMoreSub('scanner')`},
     {icon:'🧮', label:'Jogos filtrados por oportunidade de valor', action:`showMoreSub('scanner')`},
   ])}
-  <div class="btn primary" style="padding:14px;margin-top:6px" onclick="toast('Configure seu checkout/link de pagamento aqui.','💎')">Assinar Premium</div>`;
+  <div class="premium-actions">
+    <button class="btn primary premium-cta" onclick="openPremiumCheckout()">Assinar Premium — ${PRADO_PAYMENT_CONFIG.price}</button>
+    <button class="btn premium-whatsapp" onclick="openPremiumSupport()">Já paguei / suporte no WhatsApp</button>
+  </div>
+  <div class="premium-note">Pagamento seguro pelo Mercado Pago. Liberação manual pelo WhatsApp: +55 98 98235-6674.</div>`;
 }
 
 // ---- Simulator ----
