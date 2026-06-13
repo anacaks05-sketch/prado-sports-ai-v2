@@ -659,7 +659,7 @@ function setFavTeam(code){ state.favTeam=code; localStorage.setItem('prado_fav_t
 // ---- Premium ----
 function renderPremiumSub(){
   return `<div class="premium-hero">
-    <div class="premium-pill">💎 Plano ativo</div>
+    <div class="premium-pill">💎 PRADO PREMIUM</div>
     <div class="premium-title">${PRADO_PAYMENT_CONFIG.planName}</div>
     <div class="premium-price">${PRADO_PAYMENT_CONFIG.price}</div>
     <div class="premium-sub">Assinatura via Mercado Pago com Pix/cartão. Depois do pagamento, envie o comprovante no WhatsApp para liberar o acesso premium.</div>
