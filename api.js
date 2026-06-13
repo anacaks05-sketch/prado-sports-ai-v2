@@ -93,31 +93,21 @@ const PradoAPI = (() => {
   async function fetchMatches(){
     const byId = new Map();
     const tz = timezone();
-    const days = Math.max(0, Math.min(7, Number(PRADO_CONFIG.DAYS_AHEAD || 3)));
+    const days = Math.max(0, Math.min(4, Number(PRADO_CONFIG.DAYS_AHEAD || 2)));
 
-    // 1) Ao vivo. Se não tiver jogo ao vivo agora, a API pode retornar vazio — isso é normal.
-    mergeFixtures(byId, await safeGet('ao vivo', 'fixtures', { live: 'all', timezone: tz }));
-
-    // 2) Hoje + próximos dias, com data no fuso do Brasil.
+    // Plano grátis da API-Football não aceita o parâmetro `next`.
+    // Por isso buscamos por data: hoje + próximos dias, no fuso do Brasil.
     for(let i=0; i<=days; i++){
       mergeFixtures(byId, await safeGet(`dia ${ymd(i)}`, 'fixtures', { date: ymd(i), timezone: tz }));
     }
 
-    // 3) Se não encontrou nada por data, tenta a busca ampla de próximos jogos.
-    // Isso ajuda quando não há jogo hoje ou quando o calendário da API não retorna por data.
+    // Se não houver jogos futuros no período, busca resultados recentes por data
+    // sem usar `last`, para continuar compatível com o plano grátis.
     if(byId.size === 0){
-      mergeFixtures(byId, await safeGet('próximos jogos', 'fixtures', { next: 25, timezone: tz }));
-    }
-
-    // 4) Se ainda estiver vazio, tenta intervalo hoje → próximos 7 dias.
-    if(byId.size === 0){
-      mergeFixtures(byId, await safeGet('intervalo da semana', 'fixtures', { from: ymd(0), to: ymd(7), timezone: tz }));
-    }
-
-    // 5) Para preencher resultados recentes quando não há jogos futuros.
-    // Só roda depois que já tentamos jogos atuais/próximos para economizar chamadas.
-    if(byId.size === 0){
-      mergeFixtures(byId, await safeGet('resultados recentes', 'fixtures', { last: 15, timezone: tz }));
+      for(let i=-1; i>=-3; i--){
+        mergeFixtures(byId, await safeGet(`resultados ${ymd(i)}`, 'fixtures', { date: ymd(i), timezone: tz }));
+        if(byId.size > 0) break;
+      }
     }
 
     return [...byId.values()]

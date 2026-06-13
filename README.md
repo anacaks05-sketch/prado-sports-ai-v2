@@ -65,13 +65,13 @@ Value: cole aqui sua chave da API-Sports
 
 Depois disso o app tenta carregar:
 
-- jogos ao vivo;
-- jogos ao vivo;
+- jogos reais por data;
 - jogos de hoje;
 - próximos dias;
-- busca ampla por próximos jogos quando não há partidas na data;
-- resultados recentes caso não exista agenda no momento;
+- resultados recentes por data, caso não exista agenda;
 - ligas/times que vierem na resposta.
+
+Importante: esta versão evita o parâmetro `next`, porque o plano grátis da API-Football não libera esse parâmetro. A busca é feita por `date=AAAA-MM-DD`, que funciona no plano grátis.
 
 Se a chave não estiver configurada, o app continua abrindo normalmente em modo demo.
 
@@ -80,10 +80,10 @@ Se a chave não estiver configurada, o app continua abrindo normalmente em modo 
 No arquivo `config.js`, deixei:
 
 ```js
-DAYS_AHEAD: 5
+DAYS_AHEAD: 2
 ```
 
-Isso mostra hoje + próximos 3 dias e ajuda a economizar requisições durante os testes.
+Isso mostra hoje + próximos 2 dias e ajuda a economizar requisições durante os testes.
 
 ## 🔔 Notificações push
 O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá-las de verdade você precisará de:
@@ -93,7 +93,7 @@ O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá
 ## 🚧 O que é mock vs. real hoje
 | Recurso | Status |
 |---|---|
-| Times, ligas, jogos, eventos, escalações | Mock (dados de exemplo) |
+| Times, ligas e jogos | Real via API-Sports quando a chave estiver ativa; demo como fallback |
 | Estatísticas (xG, posse, chutes, mapas de calor/chutes) | Mock (gerado de forma consistente) |
 | Rankings (artilheiros, assistências, etc.) | Mock |
 | Odds (abertura x atual) | Mock |

@@ -1,17 +1,17 @@
-const CACHE_NAME = "prado-sports-ai-v9-api-smart";
+const CACHE_NAME = "prado-sports-ai-v10-api-free-date";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
-  "./style.css?v=api-smart-20260613",
+  "./style.css?v=api-free-date-20260613",
   "./data.js",
-  "./data.js?v=api-smart-20260613",
+  "./data.js?v=api-free-date-20260613",
   "./config.js",
-  "./config.js?v=api-smart-20260613",
+  "./config.js?v=api-free-date-20260613",
   "./api.js",
-  "./api.js?v=api-smart-20260613",
+  "./api.js?v=api-free-date-20260613",
   "./app.js",
-  "./app.js?v=api-smart-20260613",
+  "./app.js?v=api-free-date-20260613",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

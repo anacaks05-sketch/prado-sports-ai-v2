@@ -407,7 +407,8 @@ function hideMoreSub(){
 function renderHome(){
   const live = MATCHES.filter(m=>m.status==='live');
   const todayKey = todayYMD();
-  const today = MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live');
+  const todayAll = MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live');
+  const today = todayAll.slice(0,6);
   const upcoming = MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled').slice(0,3);
   const recent = MATCHES.filter(m=>m.status==='finished').slice(0,3);
   const topPicks = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
@@ -425,7 +426,7 @@ function renderHome(){
   }
 
   // Today's games
-  html += sectionHead(PRADO_ICONS.calendar + 'Jogos de hoje', null);
+  html += sectionHead(PRADO_ICONS.calendar + 'Jogos de hoje', todayAll.length>6?'Ver todos':null, ()=>{ goToPage('more'); showMoreSub('calendar'); });
   html += `<div class="card home-list-card">`;
   if(today.length) today.forEach(m=> html += matchRow(m));
   else html += emptyState(PRADO_ICONS.calendar,'Sem mais jogos hoje');

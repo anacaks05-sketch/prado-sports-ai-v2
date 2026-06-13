@@ -15,8 +15,8 @@ const PRADO_CONFIG = {
   API_PROXY_URL: '/api/football',
 
   // Quantos dias mostrar no app: hoje + próximos dias.
-  // Para testar no plano grátis, deixe baixo para economizar requisições.
-  DAYS_AHEAD: 5,
+  // Plano grátis: busca por data (hoje + próximos dias) para não usar o parâmetro next.
+  DAYS_AHEAD: 2,
 
   // Timezone do Brasil
   TIMEZONE: 'America/Sao_Paulo',
