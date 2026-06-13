@@ -24,6 +24,8 @@ const PRADO_PAYMENT_CONFIG = {
   whatsappMessage: 'Olá, acabei de assinar o Prado Sports AI Premium e quero liberar meu acesso.'
 };
 
+const PRADO_PREMIUM_STORAGE_KEY = 'prado_premium_access_v1';
+
 function openPremiumCheckout(){
   window.open(PRADO_PAYMENT_CONFIG.checkoutUrl, '_blank', 'noopener,noreferrer');
 }
@@ -33,6 +35,264 @@ function openPremiumSupport(){
   window.open(`https://wa.me/${PRADO_PAYMENT_CONFIG.whatsapp}?text=${message}`, '_blank', 'noopener,noreferrer');
 }
 
+function normalizePremiumCode(value){
+  return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function normalizePremiumKey(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function normalizePremiumStatus(value){
+  return normalizePremiumKey(value || 'ativo');
+}
+
+function parsePremiumDate(value){
+  const text = String(value || '').trim();
+  if(!text) return null;
+
+  let match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(match){
+    let day = Number(match[1]);
+    let month = Number(match[2]);
+    let year = Number(match[3]);
+    if(year < 100) year += 2000;
+    return new Date(year, month - 1, day, 23, 59, 59);
+  }
+
+  match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(match){
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isPremiumDateActive(value){
+  const date = parsePremiumDate(value);
+  if(!date) return true;
+  return date.getTime() >= Date.now();
+}
+
+function premiumDateLabel(value){
+  const date = parsePremiumDate(value);
+  if(!date) return 'sem data de vencimento';
+  return date.toLocaleDateString('pt-BR');
+}
+
+function getPremiumAccess(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(PRADO_PREMIUM_STORAGE_KEY) || 'null');
+    if(!saved || saved.status !== 'ativo') return null;
+    if(saved.validUntil && !isPremiumDateActive(saved.validUntil)){
+      localStorage.removeItem(PRADO_PREMIUM_STORAGE_KEY);
+      return null;
+    }
+    return saved;
+  }catch(err){
+    localStorage.removeItem(PRADO_PREMIUM_STORAGE_KEY);
+    return null;
+  }
+}
+
+function isPremiumActive(){
+  return !!getPremiumAccess();
+}
+
+function savePremiumAccess(record){
+  const payload = {
+    status: 'ativo',
+    code: normalizePremiumCode(record.code),
+    name: record.name || '',
+    whatsapp: record.whatsapp || '',
+    validUntil: record.validUntil || '',
+    activatedAt: new Date().toISOString()
+  };
+  localStorage.setItem(PRADO_PREMIUM_STORAGE_KEY, JSON.stringify(payload));
+  return payload;
+}
+
+function removePremiumAccess(){
+  localStorage.removeItem(PRADO_PREMIUM_STORAGE_KEY);
+  toast('Acesso Premium removido deste aparelho.', 'ℹ️');
+  renderMoreSub('premium');
+}
+
+function premiumCodesUrl(){
+  if(typeof PRADO_CONFIG !== 'undefined' && PRADO_CONFIG.PREMIUM_CODES_URL){
+    const url = String(PRADO_CONFIG.PREMIUM_CODES_URL).trim();
+    if(url && !url.includes('COLE_AQUI')) return url;
+  }
+  return '';
+}
+
+function withCacheBust(url){
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}_=${Date.now()}`;
+}
+
+function parsePremiumCSV(text){
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+
+  for(let i=0; i<text.length; i++){
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if(ch === '"'){
+      if(quoted && next === '"'){
+        field += '"';
+        i++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if(ch === ',' && !quoted){
+      row.push(field);
+      field = '';
+    } else if((ch === '\n' || ch === '\r') && !quoted){
+      if(ch === '\r' && next === '\n') i++;
+      row.push(field);
+      if(row.some(cell => String(cell).trim() !== '')) rows.push(row);
+      row = [];
+      field = '';
+    } else {
+      field += ch;
+    }
+  }
+
+  row.push(field);
+  if(row.some(cell => String(cell).trim() !== '')) rows.push(row);
+  if(!rows.length) return [];
+
+  const headers = rows.shift().map(h => String(h || '').replace(/^\uFEFF/, '').trim());
+  return rows.map(values => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = String(values[i] || '').trim());
+    return obj;
+  });
+}
+
+function readPremiumField(row, fieldNames){
+  const wanted = fieldNames.map(normalizePremiumKey);
+  for(const key of Object.keys(row)){
+    if(wanted.includes(normalizePremiumKey(key))) return String(row[key] || '').trim();
+  }
+  return '';
+}
+
+async function fetchPremiumCodes(){
+  const url = premiumCodesUrl();
+  if(!url){
+    throw new Error('A lista externa de códigos ainda não foi configurada em config.js.');
+  }
+
+  const res = await fetch(withCacheBust(url), { cache: 'no-store' });
+  if(!res.ok){
+    throw new Error('Não consegui consultar a lista de códigos agora.');
+  }
+
+  const text = await res.text();
+  const clean = text.trim();
+  if(!clean) return [];
+
+  if(clean.startsWith('{') || clean.startsWith('[')){
+    const json = JSON.parse(clean);
+    return Array.isArray(json) ? json : (Array.isArray(json.codes) ? json.codes : []);
+  }
+
+  return parsePremiumCSV(clean);
+}
+
+function normalizePremiumRow(row){
+  return {
+    code: normalizePremiumCode(readPremiumField(row, ['codigo','código','code','codigopremium','codigo premium','acesso','chave'])),
+    status: normalizePremiumStatus(readPremiumField(row, ['status','situacao','situação','ativo'])),
+    validUntil: readPremiumField(row, ['validade','vencimento','expira','expiracao','expiração','validuntil','validade premium']),
+    name: readPremiumField(row, ['nome','cliente','name']),
+    whatsapp: readPremiumField(row, ['whatsapp','telefone','celular','phone'])
+  };
+}
+
+async function findPremiumCode(code){
+  const wanted = normalizePremiumCode(code);
+  const rows = await fetchPremiumCodes();
+  return rows.map(normalizePremiumRow).find(row => row.code === wanted) || null;
+}
+
+async function unlockPremiumWithCode(){
+  const input = document.getElementById('premium-code');
+  const btn = document.getElementById('premium-unlock-btn');
+  const code = normalizePremiumCode(input?.value);
+
+  if(!code){
+    toast('Digite o código Premium para liberar.', '🔐');
+    return;
+  }
+
+  if(input) input.value = code;
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+  }
+
+  try{
+    const record = await findPremiumCode(code);
+    if(!record){
+      throw new Error('Código não encontrado. Confira o código ou chame no WhatsApp.');
+    }
+
+    const activeStatuses = ['ativo','active','liberado','pago','ok','sim'];
+    if(!activeStatuses.includes(record.status)){
+      throw new Error('Esse código ainda não está ativo ou foi bloqueado.');
+    }
+
+    if(record.validUntil && !isPremiumDateActive(record.validUntil)){
+      throw new Error('Esse código Premium está vencido.');
+    }
+
+    const access = savePremiumAccess(record);
+    toast('Prado Premium liberado com sucesso!', '💎');
+    renderMoreSub('premium');
+
+    setTimeout(() => {
+      const msg = access.validUntil ? `Acesso ativo até ${premiumDateLabel(access.validUntil)}.` : 'Acesso ativo neste aparelho.';
+      toast(msg, '✅');
+    }, 500);
+  }catch(err){
+    toast(err.message || 'Não consegui liberar o Premium agora.', '⚠️');
+  }finally{
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Liberar Premium';
+    }
+  }
+}
+
+async function validateStoredPremium(){
+  const access = getPremiumAccess();
+  const url = premiumCodesUrl();
+  if(!access || !url) return;
+
+  try{
+    const record = await findPremiumCode(access.code);
+    const activeStatuses = ['ativo','active','liberado','pago','ok','sim'];
+    if(!record || !activeStatuses.includes(record.status) || (record.validUntil && !isPremiumDateActive(record.validUntil))){
+      localStorage.removeItem(PRADO_PREMIUM_STORAGE_KEY);
+      toast('Seu acesso Premium precisa ser renovado.', '🔐');
+    } else {
+      savePremiumAccess(record);
+    }
+  }catch(err){
+    console.info('Validação Premium offline/indisponível:', err.message);
+  }
+}
 
 
 
@@ -86,6 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setTimeout(()=>document.getElementById('splash-screen')?.classList.add('hide'), 1350);
   applyTheme('dark');
   await loadRealDataIfConfigured();
+  await validateStoredPremium();
   bindNav();
   renderHome();
   renderLive();
@@ -549,6 +810,11 @@ function renderMoreSub(view){
   }[view];
 
   const body = document.getElementById('more-sub-body');
+  if(['simulator','scanner'].includes(view) && !isPremiumActive()){
+    body.innerHTML = renderPremiumLocked(view);
+    return;
+  }
+
   if(view==='competitions') body.innerHTML = renderCompetitionsSub();
   else if(view==='calendar') body.innerHTML = renderCalendarSub();
   else if(view==='odds') body.innerHTML = renderOddsSub();
@@ -657,13 +923,50 @@ function favTeamRow(){
 function setFavTeam(code){ state.favTeam=code; localStorage.setItem('prado_fav_team',code); toast(code?`${teamName(code)} definido como seu time! ⭐`:'Time favorito removido'); }
 
 // ---- Premium ----
-function renderPremiumSub(){
-  return `<div class="premium-hero">
-    <div class="premium-pill">💎 PRADO PREMIUM</div>
-    <div class="premium-title">${PRADO_PAYMENT_CONFIG.planName}</div>
-    <div class="premium-price">${PRADO_PAYMENT_CONFIG.price}</div>
-    <div class="premium-sub">Assinatura via Mercado Pago com Pix/cartão. Depois do pagamento, envie o comprovante no WhatsApp para liberar o acesso premium.</div>
+function renderPremiumUnlockBox(){
+  return `<div class="card premium-unlock-card">
+    <div class="unlock-head">
+      <div class="unlock-icon">🔐</div>
+      <div>
+        <div class="unlock-title">Liberar acesso por código</div>
+        <div class="unlock-sub">Depois de pagar, digite o código Premium que você recebeu no WhatsApp.</div>
+      </div>
+    </div>
+    <div class="premium-code-row">
+      <input id="premium-code" class="premium-code-input" type="text" inputmode="text" autocomplete="off" placeholder="Ex: PRADO-JOAO-9823" onkeyup="if(event.key==='Enter') unlockPremiumWithCode()">
+      <button id="premium-unlock-btn" class="btn primary premium-unlock-btn" onclick="unlockPremiumWithCode()">Liberar Premium</button>
+    </div>
+    <div class="premium-code-help">Seu código é conferido na lista externa. Você pode cadastrar novos clientes sem publicar na Vercel de novo.</div>
+  </div>`;
+}
+
+function renderPremiumActions(){
+  return `<div class="premium-actions">
+    <button class="btn primary premium-cta" onclick="openPremiumCheckout()">Assinar Premium — ${PRADO_PAYMENT_CONFIG.price}</button>
+    <button class="btn premium-whatsapp" onclick="openPremiumSupport()">Já paguei / suporte no WhatsApp</button>
   </div>
+  <div class="premium-note">Pagamento seguro pelo Mercado Pago. Liberação manual pelo WhatsApp: +55 98 98235-6674.</div>`;
+}
+
+function renderPremiumSub(){
+  const access = getPremiumAccess();
+  const activeCard = access ? `<div class="card premium-active-card">
+    <div class="premium-active-top">
+      <span>✅ Premium ativo</span>
+      <button onclick="removePremiumAccess()">Remover</button>
+    </div>
+    <div class="premium-active-code">Código: <b>${access.code}</b></div>
+    <div class="premium-active-valid">${access.validUntil ? `Validade: ${premiumDateLabel(access.validUntil)}` : 'Acesso ativo neste aparelho'}</div>
+  </div>` : '';
+
+  return `<div class="premium-hero ${access ? 'active' : ''}">
+    <div class="premium-pill">💎 PRADO PREMIUM</div>
+    <div class="premium-title">${access ? 'Seu Premium está liberado' : PRADO_PAYMENT_CONFIG.planName}</div>
+    <div class="premium-price">${PRADO_PAYMENT_CONFIG.price}</div>
+    <div class="premium-sub">${access ? 'Scanner, simulador e recursos avançados desbloqueados neste aparelho.' : 'Assinatura via Mercado Pago com Pix/cartão. Depois do pagamento, envie o comprovante no WhatsApp para receber seu código Premium.'}</div>
+  </div>
+  ${activeCard}
+  ${!access ? renderPremiumUnlockBox() : ''}
   <div class="premium-grid">
     <button class="premium-mini" onclick="showMoreSub('scanner')">🔎 Scanner</button>
     <button class="premium-mini" onclick="showMoreSub('simulator')">📈 Simulador</button>
@@ -678,11 +981,18 @@ function renderPremiumSub(){
     {icon:'🔎', label:'Scanner de valor em tempo real', action:`showMoreSub('scanner')`},
     {icon:'🧮', label:'Jogos filtrados por oportunidade de valor', action:`showMoreSub('scanner')`},
   ])}
-  <div class="premium-actions">
-    <button class="btn primary premium-cta" onclick="openPremiumCheckout()">Assinar Premium — ${PRADO_PAYMENT_CONFIG.price}</button>
-    <button class="btn premium-whatsapp" onclick="openPremiumSupport()">Já paguei / suporte no WhatsApp</button>
+  ${!access ? renderPremiumActions() : '<div class="premium-note">Acesso Premium salvo neste aparelho. Se trocar de celular, digite o código novamente.</div>'}`;
+}
+
+function renderPremiumLocked(view){
+  const name = view === 'scanner' ? 'Scanner de valor' : 'Simulador de apostas';
+  return `<div class="card premium-locked-card">
+    <div class="premium-locked-icon">🔒</div>
+    <div class="premium-locked-title">${name} é Premium</div>
+    <div class="premium-locked-sub">Assine o Prado Premium ou digite seu código de acesso para liberar este recurso.</div>
   </div>
-  <div class="premium-note">Pagamento seguro pelo Mercado Pago. Liberação manual pelo WhatsApp: +55 98 98235-6674.</div>`;
+  ${renderPremiumUnlockBox()}
+  ${renderPremiumActions()}`;
 }
 
 // ---- Simulator ----

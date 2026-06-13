@@ -966,3 +966,113 @@ main{
   font-size:11.5px;
   line-height:1.45;
 }
+
+/* ===================== PREMIUM CODE UNLOCK ===================== */
+.premium-hero.active{
+  background:linear-gradient(135deg,#22F5A7,#4D9CFF)!important;
+  color:#04140F!important;
+}
+.premium-unlock-card,
+.premium-active-card,
+.premium-locked-card{
+  padding:14px!important;
+  margin-bottom:12px;
+  background:linear-gradient(160deg, rgba(34,245,167,.09), rgba(77,156,255,.055) 55%, rgba(255,255,255,.025)), var(--surface)!important;
+  border:1px solid rgba(34,245,167,.18)!important;
+}
+.unlock-head{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  margin-bottom:12px;
+}
+.unlock-icon,
+.premium-locked-icon{
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,184,77,.14);
+  border:1px solid rgba(255,184,77,.22);
+}
+.unlock-title,
+.premium-locked-title{
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:900;
+  font-size:15px;
+}
+.unlock-sub,
+.premium-locked-sub,
+.premium-code-help,
+.premium-active-valid{
+  color:var(--text-dim);
+  font-size:11.5px;
+  line-height:1.45;
+  margin-top:3px;
+}
+.premium-code-row{
+  display:grid;
+  gap:8px;
+}
+.premium-code-input{
+  width:100%;
+  min-height:46px;
+  border-radius:15px;
+  border:1px solid var(--border-soft);
+  background:var(--surface-2);
+  color:var(--text);
+  outline:none;
+  padding:0 12px;
+  font-size:13px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+.premium-code-input:focus{
+  border-color:rgba(34,245,167,.45);
+  box-shadow:0 0 0 3px rgba(34,245,167,.08);
+}
+.premium-unlock-btn{
+  min-height:46px;
+  justify-content:center;
+  font-weight:950;
+  cursor:pointer;
+}
+.premium-unlock-btn:disabled{
+  opacity:.65;
+  cursor:wait;
+}
+.premium-active-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  color:var(--accent);
+  font-weight:950;
+  font-size:13px;
+}
+.premium-active-top button{
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.055);
+  color:var(--text-dim);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:11px;
+  font-weight:800;
+}
+.premium-active-code{
+  margin-top:8px;
+  font-size:12px;
+  color:var(--text-dim);
+}
+.premium-active-code b{ color:var(--text); }
+.premium-locked-card{
+  text-align:center;
+  padding:18px 14px!important;
+}
+.premium-locked-icon{
+  margin:0 auto 10px;
+}

@@ -96,7 +96,7 @@ O `sw.js` já tem listeners de `push` e `notificationclick` prontos. Para ativá
 | Notificações push reais | Estrutura pronta, requer backend |
 | Apps nativos iOS/Android | Fora do escopo (use o PWA) |
 
-## 💎 Prado Premium / Pagamento
+## 💎 Prado Premium / Pagamento e código de acesso
 
 O botão **Assinar Premium** já está configurado para abrir o checkout do Mercado Pago:
 
@@ -105,8 +105,49 @@ O botão **Assinar Premium** já está configurado para abrir o checkout do Merc
 - Checkout: https://mpago.la/1mg8mFi
 - Suporte/liberação manual: WhatsApp +55 98 98235-6674
 
-Fluxo atual: cliente paga no Mercado Pago → envia comprovante pelo WhatsApp → acesso premium é liberado manualmente.
-Para liberar automaticamente no futuro, será necessário adicionar login, banco de dados e webhook do Mercado Pago.
+### Fluxo de venda
+
+Cliente paga no Mercado Pago → envia comprovante pelo WhatsApp → você cria um código Premium na planilha → cliente digita o código no app → Premium libera naquele aparelho.
+
+### Como configurar a lista externa de códigos
+
+1. Crie uma planilha no Google Sheets com estas colunas:
+
+```
+Código | Status | Validade
+```
+
+2. Exemplo de linhas:
+
+```
+PRADO-JOAO-9823 | ativo | 13/07/2026
+PRADO-MARIA-4419 | ativo | 13/07/2026
+```
+
+3. No Google Sheets, clique em **Arquivo → Compartilhar → Publicar na Web**.
+4. Escolha a aba da planilha e o formato **CSV**.
+5. Copie o link publicado.
+6. Cole esse link no arquivo `config.js`, neste campo:
+
+```js
+PREMIUM_CODES_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQAYrBkpkkMXifpT764LcpjUwzh87XfR22QoD_UtFpP3Q47gb2kO5Khj_MYxb-q24XnO7HyCAfTsT86/pub?gid=0&single=true&output=csv'
+```
+
+Depois dessa configuração inicial, você publica na Vercel uma única vez. Nas próximas vendas, basta adicionar uma nova linha na planilha. Não precisa publicar na Vercel de novo.
+
+### Status aceitos
+
+O app aceita os seguintes status como liberados:
+
+```
+ativo, liberado, pago, ok, sim
+```
+
+Para bloquear alguém, altere o status para `inativo`, `bloqueado` ou apague a linha da planilha.
+
+### Atenção
+
+Esse modelo é bom para começar a vender rápido, mas ainda é uma liberação simples no front-end. Para um sistema 100% profissional, o próximo passo é login + banco de dados + webhook do Mercado Pago.
 
 ## 🎨 Identidade visual
 - Paleta "Pitch Night": fundo `#070B11`, superfícies `#131B26`, verde "confiança" `#21E6A1`, dourado das odds `#FFB23E`, vermelho ao vivo `#FF4757`.

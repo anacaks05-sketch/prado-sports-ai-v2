@@ -21,5 +21,20 @@ const PRADO_CONFIG = {
   DAYS_AHEAD: 7,
 
   // Timezone do Brasil
-  TIMEZONE: 'America/Fortaleza'
+  TIMEZONE: 'America/Fortaleza',
+
+  /* =====================================================
+     Códigos Premium externos
+
+     Cole aqui o link CSV da sua planilha publicada.
+     Depois dessa configuração, você só adiciona códigos na planilha
+     e NÃO precisa publicar na Vercel toda vez que vender.
+
+     Colunas recomendadas na planilha:
+     Código | Status | Validade
+
+     Status aceitos: ativo, liberado, pago, ok, sim
+     Validade: use DD/MM/AAAA, exemplo 13/07/2026
+  ===================================================== */
+  PREMIUM_CODES_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQAYrBkpkkMXifpT764LcpjUwzh87XfR22QoD_UtFpP3Q47gb2kO5Khj_MYxb-q24XnO7HyCAfTsT86/pub?gid=0&single=true&output=csv'
 };
