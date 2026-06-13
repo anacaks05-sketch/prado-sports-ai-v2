@@ -17,11 +17,17 @@
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+<div id="splash-screen" aria-hidden="true">
+  <div class="splash-logo"><span>P</span></div>
+  <div class="splash-title">Prado AI</div>
+  <div class="splash-sub">Sports intelligence</div>
+  <div class="splash-loader"><i></i></div>
+</div>
 <div id="app">
 
   <header class="topbar">
     <div class="logo">
-      <div class="logo-mark">P</div>
+      <div class="logo-mark"><span>P</span></div>
       <div>
         <div class="logo-text">Prado Sports<span> AI</span></div>
         <div class="logo-sub">Futebol &amp; Inteligência</div>
@@ -41,10 +47,10 @@
   </main>
 
   <nav class="bottom-nav">
-    <button class="nav-item active" data-page="home"><span class="nav-icon">🏠</span>Início</button>
-    <button class="nav-item" data-page="live"><span class="nav-icon-wrap"><span class="nav-icon">📺</span><span class="nav-dot"></span></span>Ao Vivo</button>
-    <button class="nav-item" data-page="ai"><span class="nav-icon">🤖</span>IA Palpites</button>
-    <button class="nav-item" data-page="rank"><span class="nav-icon">📰</span>Notícias</button>
+    <button class="nav-item active" data-page="home"><span class="nav-icon nav-home">⌂</span>Início</button>
+    <button class="nav-item" data-page="live"><span class="nav-icon-wrap"><span class="nav-icon nav-live">▶</span><span class="nav-dot"></span></span>Ao Vivo</button>
+    <button class="nav-item" data-page="ai"><span class="nav-icon nav-ai">✦</span>IA Palpites</button>
+    <button class="nav-item" data-page="rank"><span class="nav-icon nav-news">◈</span>Notícias</button>
     <button class="nav-item" data-page="more"><span class="nav-icon">☰</span>Mais</button>
   </nav>
 

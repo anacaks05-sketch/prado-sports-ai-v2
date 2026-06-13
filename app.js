@@ -52,6 +52,7 @@ async function loadRealDataIfConfigured(){
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', async () => {
+  setTimeout(()=>document.getElementById('splash-screen')?.classList.add('hide'), 1350);
   applyTheme('dark');
   await loadRealDataIfConfigured();
   bindNav();
@@ -852,7 +853,8 @@ function renderAboutSub(){
 // ===================== MATCH DETAIL =====================
 let currentMatchId = null;
 function bindDetailOverlay(){
-  document.getElementById('detail-close').addEventListener('click', closeMatchDetail);
+  const close = document.getElementById('detail-close');
+  if(close) close.addEventListener('click', closeMatchDetail);
 }
 function closeMatchDetail(){
   document.getElementById('match-detail').classList.remove('open');
