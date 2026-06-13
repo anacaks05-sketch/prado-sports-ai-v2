@@ -1,6 +1,9 @@
 const API_BASE_URL = 'https://v3.football.api-sports.io';
 const ALLOWED_ENDPOINTS = new Set([
   'fixtures',
+  'fixtures/statistics',
+  'fixtures/events',
+  'fixtures/lineups',
   'leagues',
   'standings',
   'teams',
