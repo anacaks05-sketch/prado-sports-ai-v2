@@ -66,8 +66,11 @@ Value: cole aqui sua chave da API-Sports
 Depois disso o app tenta carregar:
 
 - jogos ao vivo;
+- jogos ao vivo;
 - jogos de hoje;
-- próximos jogos;
+- próximos dias;
+- busca ampla por próximos jogos quando não há partidas na data;
+- resultados recentes caso não exista agenda no momento;
 - ligas/times que vierem na resposta.
 
 Se a chave não estiver configurada, o app continua abrindo normalmente em modo demo.
@@ -77,7 +80,7 @@ Se a chave não estiver configurada, o app continua abrindo normalmente em modo 
 No arquivo `config.js`, deixei:
 
 ```js
-DAYS_AHEAD: 3
+DAYS_AHEAD: 5
 ```
 
 Isso mostra hoje + próximos 3 dias e ajuda a economizar requisições durante os testes.

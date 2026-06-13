@@ -16,10 +16,10 @@ const PRADO_CONFIG = {
 
   // Quantos dias mostrar no app: hoje + próximos dias.
   // Para testar no plano grátis, deixe baixo para economizar requisições.
-  DAYS_AHEAD: 3,
+  DAYS_AHEAD: 5,
 
   // Timezone do Brasil
-  TIMEZONE: 'America/Fortaleza',
+  TIMEZONE: 'America/Sao_Paulo',
 
   /* =====================================================
      Códigos Premium externos

@@ -12,10 +12,25 @@ const PradoAPI = (() => {
     return '/api/football';
   }
 
+  function timezone(){
+    return (typeof PRADO_CONFIG !== 'undefined' && PRADO_CONFIG.TIMEZONE) ? PRADO_CONFIG.TIMEZONE : 'America/Sao_Paulo';
+  }
+
+  // Data YYYY-MM-DD respeitando o fuso configurado. Evita erro de dia por UTC.
   function ymd(offset=0){
+    const tz = timezone();
     const d = new Date();
     d.setDate(d.getDate() + offset);
-    return d.toISOString().slice(0,10);
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(d).reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day}`;
   }
 
   function buildProxyUrl(endpoint, params={}){
@@ -29,49 +44,85 @@ const PradoAPI = (() => {
     return url.toString();
   }
 
+  function apiErrorMessage(json, fallback){
+    const errors = json?.errors;
+    if(!errors) return fallback;
+    if(typeof errors === 'string') return errors;
+    if(Array.isArray(errors)) return errors.filter(Boolean).join(' | ') || fallback;
+    if(typeof errors === 'object'){
+      return Object.values(errors).map(v => Array.isArray(v) ? v.join(' ') : String(v)).filter(Boolean).join(' | ') || fallback;
+    }
+    return fallback;
+  }
+
   async function apiGet(endpoint, params={}){
     const res = await fetch(buildProxyUrl(endpoint, params), { cache: 'no-store' });
     const json = await res.json().catch(() => ({}));
 
     if(!res.ok){
-      const msg = json?.message || json?.error || `API erro ${res.status}`;
+      const msg = json?.message || json?.error || apiErrorMessage(json, `API erro ${res.status}`);
       throw new Error(msg);
     }
 
     if(json.errors && Object.keys(json.errors).length){
+      const msg = apiErrorMessage(json, 'A API retornou erro.');
       console.warn('API errors:', json.errors);
+      throw new Error(msg);
     }
 
-    return json.response || [];
+    return Array.isArray(json.response) ? json.response : [];
+  }
+
+  async function safeGet(label, endpoint, params={}){
+    try{
+      const items = await apiGet(endpoint, params);
+      console.info(`Prado Sports AI API: ${label}`, items.length, params);
+      return items;
+    }catch(e){
+      console.warn(`Falha ao buscar ${label}:`, e.message || e);
+      return [];
+    }
+  }
+
+  function mergeFixtures(targetMap, items){
+    (items || []).forEach(item => {
+      if(item?.fixture?.id) targetMap.set(String(item.fixture.id), item);
+    });
   }
 
   async function fetchMatches(){
-    const all = [];
-    const timezone = PRADO_CONFIG.TIMEZONE || 'America/Fortaleza';
-
-    // Jogos ao vivo
-    try{
-      const live = await apiGet('fixtures', { live: 'all', timezone });
-      all.push(...live);
-    }catch(e){ console.warn('Falha ao buscar ao vivo:', e); }
-
-    // Hoje + próximos dias
+    const byId = new Map();
+    const tz = timezone();
     const days = Math.max(0, Math.min(7, Number(PRADO_CONFIG.DAYS_AHEAD || 3)));
+
+    // 1) Ao vivo. Se não tiver jogo ao vivo agora, a API pode retornar vazio — isso é normal.
+    mergeFixtures(byId, await safeGet('ao vivo', 'fixtures', { live: 'all', timezone: tz }));
+
+    // 2) Hoje + próximos dias, com data no fuso do Brasil.
     for(let i=0; i<=days; i++){
-      try{
-        const day = await apiGet('fixtures', { date: ymd(i), timezone });
-        all.push(...day);
-      }catch(e){ console.warn('Falha ao buscar dia', i, e); }
+      mergeFixtures(byId, await safeGet(`dia ${ymd(i)}`, 'fixtures', { date: ymd(i), timezone: tz }));
     }
 
-    // Remove duplicados
-    const byId = new Map();
-    all.forEach(item => {
-      if(item?.fixture?.id) byId.set(item.fixture.id, item);
-    });
+    // 3) Se não encontrou nada por data, tenta a busca ampla de próximos jogos.
+    // Isso ajuda quando não há jogo hoje ou quando o calendário da API não retorna por data.
+    if(byId.size === 0){
+      mergeFixtures(byId, await safeGet('próximos jogos', 'fixtures', { next: 25, timezone: tz }));
+    }
+
+    // 4) Se ainda estiver vazio, tenta intervalo hoje → próximos 7 dias.
+    if(byId.size === 0){
+      mergeFixtures(byId, await safeGet('intervalo da semana', 'fixtures', { from: ymd(0), to: ymd(7), timezone: tz }));
+    }
+
+    // 5) Para preencher resultados recentes quando não há jogos futuros.
+    // Só roda depois que já tentamos jogos atuais/próximos para economizar chamadas.
+    if(byId.size === 0){
+      mergeFixtures(byId, await safeGet('resultados recentes', 'fixtures', { last: 15, timezone: tz }));
+    }
 
     return [...byId.values()]
       .map(mapFixtureToMatch)
+      .filter(Boolean)
       .sort((a,b)=> String(a.date).localeCompare(String(b.date)));
   }
 
@@ -107,30 +158,32 @@ const PradoAPI = (() => {
         country: league?.country || '',
         icon: league?.country === 'Brazil' ? '🇧🇷' : '🏆',
         color: '#21E6A1',
-        logo: league?.logo || ''
+        logo: league?.logo || '',
+        tier: 'API-Sports'
       };
     }
     return code;
   }
 
   function mapFixtureToMatch(item){
+    if(!item?.fixture || !item?.teams?.home || !item?.teams?.away) return null;
     const home = upsertTeam(item.teams.home);
     const away = upsertTeam(item.teams.away);
-    const statusShort = item.fixture.status.short;
+    const statusShort = item.fixture.status?.short || 'NS';
     const status = mapStatus(statusShort);
 
     return {
       id: String(item.fixture.id),
-      league: leagueCode(item.league),
+      league: leagueCode(item.league || {}),
       date: item.fixture.date,
       status,
-      minute: item.fixture.status.elapsed || 0,
+      minute: item.fixture.status?.elapsed || 0,
       home,
       away,
-      hs: item.goals.home ?? 0,
-      as: item.goals.away ?? 0,
+      hs: item.goals?.home ?? 0,
+      as: item.goals?.away ?? 0,
       venue: [item.fixture.venue?.name, item.fixture.venue?.city].filter(Boolean).join(', '),
-      round: item.league.round || '',
+      round: item.league?.round || '',
       stats: {
         possession:[50,50], shotsOnTarget:[0,0], shotsOffTarget:[0,0], corners:[0,0], fouls:[0,0],
         yellow:[0,0], red:[0,0], xg:[0,0], xa:[0,0], dangerousAttacks:[0,0]

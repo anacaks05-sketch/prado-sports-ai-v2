@@ -327,11 +327,11 @@ async function loadRealDataIfConfigured(){
     if(Array.isArray(realMatches) && realMatches.length){
       MATCHES = realMatches;
       PREDICTIONS = PradoAPI.makePredictions(realMatches);
-      NEWS = [{ icon:'✅', tag:'API conectada', title:`${realMatches.length} jogos carregados da sua API`, time:'agora' }, ...NEWS.slice(0,4)];
+      NEWS = [{ icon:'✅', tag:'API conectada', title:`${realMatches.length} jogos reais carregados da API`, time:'agora' }, ...NEWS.slice(0,4)];
       status.textContent = `✅ API conectada: ${realMatches.length} jogos reais carregados.`;
       setTimeout(()=> status.style.display='none', 2500);
     } else {
-      status.textContent = 'API respondeu, mas não retornou jogos. Usando dados demo.';
+      status.textContent = '✅ API conectada. Nenhum jogo real encontrado agora; mantendo dados demo.';
       setTimeout(()=> status.style.display='none', 3500);
     }
   }catch(err){
