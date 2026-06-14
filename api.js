@@ -154,12 +154,15 @@ const PradoAPI = (() => {
 
     const n = String(league?.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     const c = String(league?.country || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    if(n.includes('world cup') && !n.includes('club')) return 'WC';
+    if(n.includes('world cup') && !n.includes('club')){
+      if(n.includes('qualification') || n.includes('qualifiers') || n.includes('qualifying') || n.includes('qualificacao') || n.includes('eliminatoria')) return 'ELIM';
+      return 'WC';
+    }
     if(n.includes('club world cup')) return 'CLUBWC';
     if(n.includes('libertadores')) return 'LIBERTA';
     if(n.includes('sudamericana') || n.includes('sul-americana')) return 'SULAM';
-    if(c.includes('brazil') && n.includes('serie a')) return 'BRA_A';
-    if(c.includes('brazil') && n.includes('serie b')) return 'BRA_B';
+    if(c.includes('brazil') && (n.includes('brasileirao') || n.includes('brasileiro')) && n.includes('serie a')) return 'BRA_A';
+    if(c.includes('brazil') && (n.includes('brasileirao') || n.includes('brasileiro')) && n.includes('serie b')) return 'BRA_B';
     if(n.includes('copa do brasil')) return 'CDB';
     if(n.includes('champions league')) return 'UCL';
     if(n.includes('europa league')) return 'UEL';

@@ -407,10 +407,17 @@ function hideMoreSub(){
 // ===================== FILTRO PREMIUM DE JOGOS =====================
 const PRADO_PRIORITY_LEAGUES = {
   WC:1000, CLUBWC:980, LIBERTA:940, SULAM:900,
-  BRA_A:930, BRA_B:760, CDB:880, ELIM:860,
+  BRA_A:930, BRA_B:760, CDB:880, ELIM:520,
   UCL:920, UEL:840, EPL:880, LALIGA:860, SERIEA:840, BUND:830, LIGUE1:800, PORTUGAL:760,
   MLS:650
 };
+const PRADO_HOME_LEAGUES = new Set(['WC','CLUBWC','BRA_A','CDB','LIBERTA','SULAM','UCL','UEL','EPL','LALIGA','SERIEA','BUND','LIGUE1','PORTUGAL','MLS']);
+const PRADO_EXCLUDED_HOME_WORDS = [
+  'u20','u21','u23','sub 20','sub-20','youth','reserves','reserve','women','feminino',
+  'npl','state league','regional','county','amateur','serie d','serie c','série d','série c',
+  'paulista','carioca','mineiro','gaucho','gaúcho','capixaba','pernambucano','paraibano','potiguar',
+  'copa peru','segunda division','segunda división','liga 2','division 2','a2','a3','a4','ii'
+];
 const PRADO_BIG_TEAM_WORDS = [
   'brasil','brazil','flamengo','palmeiras','corinthians','sao paulo','são paulo','botafogo','fluminense','gremio','grêmio','internacional','atletico','atlético','bahia','vasco','cruzeiro','santos',
   'real madrid','barcelona','manchester city','manchester united','liverpool','arsenal','chelsea','bayern','psg','paris saint','juventus','inter','milan','atletico madrid','atlético madrid',
@@ -421,31 +428,54 @@ function textNorm(value){
 }
 function matchPriorityScore(m){
   const lg = leagueOf(m);
-  const name = textNorm(`${lg.name} ${lg.country} ${lg.tier} ${m.round||''} ${teamName(m.home)} ${teamName(m.away)}`);
+  const leagueName = textNorm(lg.name);
+  const country = textNorm(lg.country);
+  const tier = textNorm(lg.tier);
+  const round = textNorm(m.round || '');
+  const homeName = textNorm(teamName(m.home));
+  const awayName = textNorm(teamName(m.away));
+  const name = `${leagueName} ${country} ${tier} ${round} ${homeName} ${awayName}`;
   let score = PRADO_PRIORITY_LEAGUES[m.league] || 0;
 
-  if(name.includes('world cup') || name.includes('copa do mundo')) score += 1000;
-  if(name.includes('club world cup') || name.includes('mundial de clubes')) score += 980;
-  if(name.includes('libertadores')) score += 940;
-  if(name.includes('sul-americana') || name.includes('sudamericana')) score += 900;
-  if(name.includes('brasileirao') || name.includes('serie a') && name.includes('brazil')) score += 900;
-  if(name.includes('copa do brasil')) score += 880;
-  if(name.includes('champions league')) score += 920;
-  if(name.includes('premier league')) score += 880;
-  if(name.includes('la liga')) score += 860;
-  if(name.includes('serie a') && (name.includes('italy') || name.includes('italia'))) score += 840;
-  if(name.includes('bundesliga')) score += 830;
-  if(name.includes('ligue 1')) score += 800;
-  if(name.includes('primeira liga') || name.includes('portugal')) score += 760;
+  const isQualifier = name.includes('qualif') || name.includes('eliminatoria') || name.includes('eliminatorias');
+  const isBrazilNationalSerieA = (leagueName.includes('brasileirao') || leagueName.includes('brasileiro')) && leagueName.includes('serie a');
+  const isBrazilNationalSerieB = (leagueName.includes('brasileirao') || leagueName.includes('brasileiro')) && leagueName.includes('serie b');
 
-  if(PRADO_BIG_TEAM_WORDS.some(t => name.includes(textNorm(t)))) score += 360;
+  if((leagueName.includes('world cup') || leagueName.includes('copa do mundo')) && !isQualifier) score += 1000;
+  if(leagueName.includes('club world cup') || leagueName.includes('mundial de clubes')) score += 980;
+  if(leagueName.includes('libertadores')) score += 940;
+  if(leagueName.includes('sul-americana') || leagueName.includes('sudamericana')) score += 900;
+  if(isBrazilNationalSerieA) score += 900;
+  if(isBrazilNationalSerieB) score += 560;
+  if(leagueName.includes('copa do brasil')) score += 880;
+  if(leagueName.includes('champions league')) score += 920;
+  if(leagueName.includes('premier league') && country.includes('england')) score += 880;
+  if(leagueName === 'la liga' && (country.includes('spain') || country.includes('espanha'))) score += 860;
+  if(leagueName.includes('serie a') && (country.includes('italy') || country.includes('italia'))) score += 840;
+  if(leagueName.includes('bundesliga') && (country.includes('germany') || country.includes('alemanha'))) score += 830;
+  if(leagueName.includes('ligue 1') && (country.includes('france') || country.includes('franca'))) score += 800;
+  if(leagueName.includes('primeira liga') && country.includes('portugal')) score += 760;
+
+  const bigCount = [homeName, awayName].filter(t => PRADO_BIG_TEAM_WORDS.some(w => t.includes(textNorm(w)))).length;
+  if(bigCount === 1) score += 220;
+  if(bigCount >= 2) score += 460;
   if(m.status === 'live') score += 140;
   if(m.status === 'scheduled') score += 50;
 
-  // Esconde da home jogos de base, reservas e ligas regionais pequenas.
-  const smallWords = ['u20','u21','u23','sub 20','sub-20','youth','reserves','reserve','women','feminino','npl','state league','regional','county','amateur','serie d','série d','paulista','carioca','mineiro','gaucho','gaúcho','capixaba','pernambucano','paraibano','potiguar','copa peru','segunda division','segunda división','liga 2','division 2','ii'];
-  if(smallWords.some(w => name.includes(w))) score -= 520;
+  if(PRADO_EXCLUDED_HOME_WORDS.some(w => name.includes(w))) score -= 900;
   return score;
+}
+function isHomeMainEligible(m){
+  const lg = leagueOf(m);
+  const name = textNorm(`${lg.name} ${lg.country} ${lg.tier} ${m.round||''} ${teamName(m.home)} ${teamName(m.away)}`);
+  if(PRADO_EXCLUDED_HOME_WORDS.some(w => name.includes(w))) return false;
+  if(PRADO_HOME_LEAGUES.has(m.league)) return true;
+
+  // Fora das ligas principais, só entra na Home se for um confronto realmente grande.
+  const homeName = textNorm(teamName(m.home));
+  const awayName = textNorm(teamName(m.away));
+  const bigCount = [homeName, awayName].filter(t => PRADO_BIG_TEAM_WORDS.some(w => t.includes(textNorm(w)))).length;
+  return bigCount >= 2 && matchPriorityScore(m) >= 900;
 }
 function sortMatchesPremium(list){
   return [...list].sort((a,b)=>{
@@ -456,8 +486,8 @@ function sortMatchesPremium(list){
 }
 function mainMatches(list, max=6, minScore=700, allowFallback=false){
   const sorted = sortMatchesPremium(list);
-  const important = sorted.filter(m => matchPriorityScore(m) >= minScore);
-  const selected = important.length || !allowFallback ? important : sorted;
+  const important = sorted.filter(m => isHomeMainEligible(m) && matchPriorityScore(m) >= minScore);
+  const selected = important.length || !allowFallback ? important : sorted.filter(isHomeMainEligible);
   return selected.slice(0, max);
 }
 function groupedLeagueCodesPremium(byLeague){
@@ -483,7 +513,7 @@ function renderHome(){
   let html = '';
 
   // Live
-  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', liveAll.length?`${liveAll.length} jogos`:null);
+  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', live.length?`${live.length} principais`:null);
   if(live.length){
     html += `<div class="hscroll">`;
     live.forEach(m=> html += liveCard(m));
