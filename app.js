@@ -310,8 +310,13 @@ const PRADO_ICONS = {
 
 // ===================== REAL API LOADER =====================
 async function loadRealDataIfConfigured(){
+  // Nunca mostrar jogos/palpites/odds demo para o cliente.
+  MATCHES = [];
+  PREDICTIONS = [];
+
   if (typeof PRADO_CONFIG === 'undefined' || !PRADO_CONFIG.API_PROXY_URL) {
-    console.info('Prado Sports AI: rota segura da API não configurada, usando dados demo.');
+    console.info('Prado Sports AI: rota segura da API não configurada. Dados demo desativados.');
+    window.PRADO_API_STATUS = { ok:false, message:'API não configurada' };
     return;
   }
 
@@ -320,11 +325,18 @@ async function loadRealDataIfConfigured(){
     if(Array.isArray(realMatches) && realMatches.length){
       MATCHES = realMatches;
       PREDICTIONS = PradoAPI.makePredictions(realMatches);
+      window.PRADO_API_STATUS = { ok:true, message:`${realMatches.length} jogos reais carregados` };
       console.info(`Prado Sports AI: ${realMatches.length} jogos reais carregados da API.`);
     } else {
+      MATCHES = [];
+      PREDICTIONS = [];
+      window.PRADO_API_STATUS = { ok:true, message:'API conectada, mas sem jogos no filtro atual' };
       console.info('Prado Sports AI: API conectada, mas sem jogos reais no filtro atual.');
     }
   }catch(err){
+    MATCHES = [];
+    PREDICTIONS = [];
+    window.PRADO_API_STATUS = { ok:false, message: err?.message || 'Erro ao carregar API' };
     console.error('Erro ao carregar API:', err);
   }
 }
@@ -631,7 +643,8 @@ function compTile(code){
 }
 
 function newsCard(n){
-  return `<div class="news-card">
+  const click = n.matchId ? ` onclick="openMatchDetail('${n.matchId}')" style="cursor:pointer"` : '';
+  return `<div class="news-card"${click}>
     <div class="news-thumb">${n.icon}</div>
     <div class="news-body">
       <div class="news-tag">${n.tag}</div>
@@ -846,6 +859,19 @@ function buildLocalAIInsight(m){
   markets.push({label:`Risco: ${risk}`, type:risk.includes('Alto')?'muted':'blue'});
   return { matchId:m.id, confidence, pick, probs, markets:markets.slice(0,5), reasons:reasons.slice(0,5), risk, signal };
 }
+
+function aiActionPlanHTML(p, m){
+  const live = m.status === 'live';
+  const score = Number(p.confidence || 0);
+  let moment = live ? `Monitorar até ${Math.min(90, (Number(m.minute||0)+5))}' se o jogo mantiver o mesmo ritmo.` : 'Aguardar escalações e odds próximas ao início.';
+  let entry = score >= 72 ? 'Entrada forte apenas se a odd confirmar valor.' : (score >= 60 ? 'Entrada moderada, preferência por mercado protegido.' : 'Sem entrada agressiva; observar o mercado.');
+  let protect = p.risk && p.risk.includes('Alto') ? 'Reduzir stake ou evitar múltipla.' : 'Usar stake controlada e proteção em empate/dupla chance quando fizer sentido.';
+  return `<div class="ai-advanced-box">
+    <div><small>Entrada</small><b>${entry}</b></div>
+    <div><small>Momento</small><b>${moment}</b></div>
+    <div><small>Proteção</small><b>${protect}</b></div>
+  </div>`;
+}
 function aiCardHTML(p, m, compact=false){
   const lg = leagueOf(m);
   const ringColor = p.confidence>=70 ? 'var(--accent)' : p.confidence>=55 ? 'var(--gold)' : 'var(--blue)';
@@ -886,6 +912,7 @@ function aiCardHTML(p, m, compact=false){
       <span><b>${p.probs.away}%</b> ${teamName(m.away)}</span>
     </div>
     <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:4px">Leitura da IA: <b style="color:var(--text)">${p.pick}</b></div>
+    ${aiActionPlanHTML(p,m)}
     <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px">Motivos</div>
     <ul class="ai-reasons">${p.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
     <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px">Mercados sugeridos</div>
@@ -930,6 +957,18 @@ function renderRankings(){
   renderFootballNews();
 }
 
+function realNewsItems(){
+  const items = [];
+  const live = sortMatchesPremium(MATCHES.filter(m=>m.status==='live'));
+  const finished = sortMatchesPremium(MATCHES.filter(m=>m.status==='finished'));
+  const scheduled = sortMatchesPremium(MATCHES.filter(m=>m.status==='scheduled'));
+  live.slice(0,8).forEach(m=>items.push({icon:'🔴', tag:'AO VIVO', title:`${teamName(m.home)} ${m.hs}x${m.as} ${teamName(m.away)} — ${m.minute || 0}'`, time:`${leagueOf(m).name}`, cat:isBrazilLeague(m)?'brasileirao':isEuropeLeague(m)?'europa':'highlights', matchId:m.id}));
+  finished.slice(0,6).forEach(m=>items.push({icon:'🏁', tag:'RESULTADO', title:`Fim: ${teamName(m.home)} ${m.hs}x${m.as} ${teamName(m.away)}`, time:`${fmtDate(m.date)} · ${leagueOf(m).name}`, cat:isBrazilLeague(m)?'brasileirao':isEuropeLeague(m)?'europa':'highlights', matchId:m.id}));
+  scheduled.slice(0,8).forEach(m=>items.push({icon:'📅', tag:'PRÉ-JOGO', title:`${teamName(m.home)} x ${teamName(m.away)} às ${fmtTime(m.date)}`, time:`${fmtDate(m.date)} · ${leagueOf(m).name}`, cat:isBrazilLeague(m)?'brasileirao':isEuropeLeague(m)?'europa':'highlights', matchId:m.id}));
+  return items;
+}
+function isBrazilLeague(m){ const lg = leagueOf(m); return /brasil|brazil/i.test(`${lg.country} ${lg.name}`); }
+function isEuropeLeague(m){ const lg = leagueOf(m); return /(premier|la liga|bundesliga|serie a|ligue 1|champions|europa|portugal|inglaterra|espanha|alemanha|italia|franca)/i.test(`${lg.country} ${lg.name}`); }
 function renderFootballNews(){
   const tabs = [
     {id:'highlights', label:'🔥 Destaques'},
@@ -937,30 +976,32 @@ function renderFootballNews(){
     {id:'europa', label:'🌍 Europa'},
     {id:'mercado', label:'💰 Mercado'},
   ];
-  const cleanNews = NEWS.filter(n => !String(n.tag || '').toLowerCase().includes('api') && !String(n.title || '').toLowerCase().includes('jogos reais carregados'));
-  const allNews = cleanNews.map((n,i)=> ({...n, cat: i===1?'mercado': i===2||i===3?'brasileirao': i===4?'brasileirao':'highlights'}));
-  const extra = [
-    {icon:'🏆', tag:'BRASILEIRÃO', title:'Rodada tem clássicos decisivos e disputa forte no G4', time:'agora', cat:'brasileirao'},
-    {icon:'🇪🇺', tag:'EUROPA', title:'Clubes europeus monitoram jovens promessas do futebol brasileiro', time:'há 18 min', cat:'europa'},
-    {icon:'💰', tag:'MERCADO', title:'Mercado da bola esquenta com sondagens por atacantes', time:'há 44 min', cat:'mercado'},
-    {icon:'⭐', tag:'EUROPA', title:'Champions League prepara rodada com favoritos em campo', time:'há 1 h', cat:'europa'},
-  ];
-  const list = [...allNews, ...extra].filter(n => state.newsTab==='highlights' ? true : n.cat===state.newsTab);
+  const all = realNewsItems();
+  const list = state.newsTab==='mercado'
+    ? []
+    : all.filter(n => state.newsTab==='highlights' ? true : n.cat===state.newsTab);
 
   let html = `<div class="section-head" style="margin-top:4px"><div class="section-title display">📰 Notícias do futebol</div></div>`;
   html += `<div class="news-hero card">
-    <div class="news-hero-badge">Atualizações</div>
-    <div class="news-hero-title">Tudo do futebol em uma aba só</div>
-    <div class="news-hero-sub">Destaques, Brasileirão, Europa e mercado da bola organizados por categoria.</div>
+    <div class="news-hero-badge">Tempo real</div>
+    <div class="news-hero-title">Atualizações reais dos jogos</div>
+    <div class="news-hero-sub">Sem notícia demo: esta aba mostra eventos e partidas reais carregadas da API.</div>
   </div>`;
   html += `<div class="chip-row news-tabs" style="margin:12px 0 8px">`;
   tabs.forEach(t=> html += `<div class="chip ${state.newsTab===t.id?'active':''}" onclick="setNewsTab('${t.id}')">${t.label}</div>`);
   html += `</div>`;
   html += `<div class="card news-list" style="padding:4px 10px;margin-top:8px">`;
-  list.forEach(n=> html += newsCard(n));
+  if(list.length){
+    list.forEach(n=> html += newsCard(n));
+  } else if(state.newsTab==='mercado'){
+    html += emptyState('💰','Notícias de mercado reais ainda não estão conectadas. Próxima etapa: integrar RSS/API de notícias para transferências.');
+  } else {
+    html += emptyState('📰','Nenhuma atualização real encontrada nesta categoria agora.');
+  }
   html += `</div>`;
   document.getElementById('page-rank').innerHTML = html;
 }
+
 function setNewsTab(id){ state.newsTab = id; renderFootballNews(); }
 function setRankTab(id){ state.rankTab = id; renderRankings(); }
 
@@ -1247,17 +1288,25 @@ function renderScannerSub(){
   let valueCount = 0;
   let h = `<div class="card scanner-intro">
     <div class="scanner-title">🔎 Scanner de valor</div>
-    <div class="scanner-sub">A IA compara probabilidades estimadas com odds do mercado e marca quando existe vantagem.</div>
+    <div class="scanner-sub">O scanner fica pronto para comparar probabilidades da IA com odds reais. Sem odds conectadas, ele não inventa oportunidade.</div>
   </div>`;
   h += `<div class="scanner-toolbar"><span>Oportunidades encontradas</span><b id="scanner-count">0</b></div>`;
+
+  if(!ODDS.length){
+    h += emptyState('🔎','Odds reais ainda não conectadas. Quando conectarmos uma API de odds, o scanner mostrará valor real sem dados demo.');
+    return h;
+  }
+
   ODDS.forEach(o=>{
     const m = MATCHES.find(x=>x.id===o.matchId);
-    const p = PREDICTIONS.find(x=>x.matchId===o.matchId);
+    const p = getPredictionForMatch(m);
+    if(!m || !p || !o?.now) return;
     const markets = [
       {label: teamName(m.home), prob:p.probs.home, odd:o.now.h},
       {label:'Empate', prob:p.probs.draw, odd:o.now.d},
       {label: teamName(m.away), prob:p.probs.away, odd:o.now.a},
-    ].map(x=> ({...x, implied:100/x.odd, diff:x.prob-(100/x.odd)})).sort((a,b)=>b.diff-a.diff);
+    ].filter(x=>Number(x.odd)>1).map(x=> ({...x, implied:100/x.odd, diff:x.prob-(100/x.odd)})).sort((a,b)=>b.diff-a.diff);
+    if(!markets.length) return;
     const best = markets[0];
     const isValue = best.diff > 3;
     if(isValue) valueCount++;
@@ -1270,6 +1319,7 @@ function renderScannerSub(){
       <button class="btn ghost scanner-btn" onclick="openMatchDetail('${m.id}','ai')">📊 Ver análise</button>
     </div>`;
   });
+  if(valueCount === 0) h += emptyState('📉','Nenhuma oportunidade de valor encontrada com odds reais no momento.');
   setTimeout(()=>{ const c=document.getElementById('scanner-count'); if(c) c.textContent=valueCount; },0);
   return h;
 }
@@ -1736,36 +1786,58 @@ function renderSearchResults(q){
   const term = textNorm(termRaw);
   const box = document.getElementById('search-results');
   if(!box) return;
+
+  const buildItem = (m, score=0) => {
+    const lg = leagueOf(m);
+    const scoreText = m.status==='live' || m.status==='finished' ? `${m.hs}x${m.as}` : fmtTime(m.date);
+    const badge = m.status==='live' ? `🔴 ${m.minute||0}' ao vivo` : (m.status==='finished' ? '🏁 encerrado' : '⏱️ pré-jogo');
+    return {type:'match', label:`${teamName(m.home)} x ${teamName(m.away)}`, sub:`${badge} · ${scoreText} · ${lg.icon} ${lg.name} · ${fmtDate(m.date)}`, id:m.id, score};
+  };
+
   if(term.length < 2){
-    box.innerHTML = emptyState('🔎','Digite pelo menos 2 letras para buscar time, liga ou jogo.');
+    const suggestions = [
+      ...sortMatchesPremium(MATCHES.filter(m=>m.status==='live')).slice(0,8),
+      ...sortMatchesPremium(MATCHES.filter(m=>m.status==='scheduled')).slice(0,6)
+    ].slice(0,12).map((m,i)=>buildItem(m,100-i));
+    box.innerHTML = suggestions.length
+      ? suggestions.map(r=>`<div class="search-item" onclick="closeSearch();openMatchDetail('${r.id}')"><b>⚽ ${r.label}</b><span>${r.sub}</span></div>`).join('')
+      : emptyState('🔎','Digite o nome do time, liga, país ou jogo. A busca só usa jogos reais carregados da API.');
     return;
   }
+
+  const words = term.split(/\s+/).filter(Boolean);
   const results = [];
   MATCHES.forEach(m=>{
     const lg = leagueOf(m);
-    const text = textNorm(`${teamName(m.home)} ${teamName(m.away)} ${lg.name} ${lg.country} ${m.round||''} ${m.status}`);
-    if(text.includes(term)){
+    const haystack = textNorm(`${teamName(m.home)} ${teamName(m.away)} ${lg.name} ${lg.country} ${m.round||''} ${m.status} ${statusLabel(m)}`);
+    if(words.every(w => haystack.includes(w))){
       const h = textNorm(teamName(m.home));
       const a = textNorm(teamName(m.away));
       const l = textNorm(lg.name);
       let score = 0;
-      if(h.startsWith(term) || a.startsWith(term)) score += 100;
-      if(h.includes(term) || a.includes(term)) score += 50;
-      if(l.includes(term)) score += 25;
-      if(m.status==='live') score += 20;
-      results.push({type:'match', label:`${teamName(m.home)} x ${teamName(m.away)}`, sub:`${statusLabel(m)} · ${lg.icon} ${lg.name} · ${fmtDate(m.date)} ${fmtTime(m.date)}`, id:m.id, score});
+      if(h === term || a === term) score += 180;
+      if(h.startsWith(term) || a.startsWith(term)) score += 120;
+      if(h.includes(term) || a.includes(term)) score += 70;
+      if(l.includes(term)) score += 45;
+      if(m.status==='live') score += 40;
+      if(isHomeMainEligible(m)) score += 20;
+      results.push(buildItem(m, score));
     }
   });
-  NEWS.forEach((n,i)=>{
+
+  const cleanNews = (NEWS || []).filter(n => !String(n.tag || '').toLowerCase().includes('api'));
+  cleanNews.forEach((n,i)=>{
     const text = textNorm(`${n.tag} ${n.title}`);
-    if(text.includes(term)) results.push({type:'news', label:n.title, sub:`${n.tag} · ${n.time}`, id:i, score:10});
+    if(words.every(w => text.includes(w))) results.push({type:'news', label:n.title, sub:`${n.tag} · ${n.time}`, id:i, score:10});
   });
-  const html = results.sort((a,b)=>b.score-a.score).slice(0,20).map(r=> r.type==='match'
+
+  const html = results.sort((a,b)=>b.score-a.score).slice(0,30).map(r=> r.type==='match'
     ? `<div class="search-item" onclick="closeSearch();openMatchDetail('${r.id}')"><b>⚽ ${r.label}</b><span>${r.sub}</span></div>`
     : `<div class="search-item" onclick="closeSearch();goToPage('rank')"><b>📰 ${r.label}</b><span>${r.sub}</span></div>`
-  ).join('') || emptyState('🔎','Nada encontrado para essa busca.');
+  ).join('') || emptyState('🔎','Nada encontrado nos jogos reais carregados. Tente buscar pelo nome do time, liga ou país.');
   box.innerHTML = html;
 }
+
 function statusLabel(m){
   if(m.status==='live') return `🔴 Ao vivo ${m.minute||''}'`;
   if(m.status==='finished') return `🏁 Encerrado ${m.hs}x${m.as}`;

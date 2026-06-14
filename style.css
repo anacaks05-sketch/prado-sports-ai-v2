@@ -1101,3 +1101,32 @@ main{
 .search-item{cursor:pointer}
 .search-item:hover{border-color:rgba(33,230,161,.35)}
 @media(max-width:420px){.ai-premium-grid{grid-template-columns:1fr 1fr}.ai-premium-grid>div:last-child{grid-column:1/-1}}
+
+/* v8 Premium real: box avançado da IA */
+.ai-advanced-box{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  margin:10px 0 8px;
+  padding:10px;
+  border:1px solid rgba(33,230,161,.16);
+  border-radius:16px;
+  background:rgba(33,230,161,.045);
+}
+.ai-advanced-box div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.ai-advanced-box small{
+  color:var(--accent);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+}
+.ai-advanced-box b{
+  color:var(--text);
+  font-size:12px;
+  line-height:1.35;
+}

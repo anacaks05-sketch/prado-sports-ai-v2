@@ -1,17 +1,17 @@
-const CACHE_NAME = "prado-sports-ai-v17-premium-real";
+const CACHE_NAME = "prado-sports-ai-v18-premium-real";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
-  "./style.css?v=premium-real-v7-20260614",
+  "./style.css?v=premium-real-v8-20260614",
   "./data.js",
-  "./data.js?v=premium-real-v7-20260614",
+  "./data.js?v=premium-real-v8-20260614",
   "./config.js",
-  "./config.js?v=premium-real-v7-20260614",
+  "./config.js?v=premium-real-v8-20260614",
   "./api.js",
-  "./api.js?v=premium-real-v7-20260614",
+  "./api.js?v=premium-real-v8-20260614",
   "./app.js",
-  "./app.js?v=premium-real-v7-20260614",
+  "./app.js?v=premium-real-v8-20260614",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
