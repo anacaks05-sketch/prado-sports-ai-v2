@@ -310,34 +310,22 @@ const PRADO_ICONS = {
 
 // ===================== REAL API LOADER =====================
 async function loadRealDataIfConfigured(){
-  const status = document.createElement('div');
-  status.id = 'api-status';
-  status.style.cssText = 'display:none;position:fixed;top:78px;left:14px;right:14px;z-index:99;background:rgba(19,27,38,.95);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;color:var(--text);font-size:13px;box-shadow:0 12px 30px rgba(0,0,0,.35)';
-  document.body.appendChild(status);
-
   if (typeof PRADO_CONFIG === 'undefined' || !PRADO_CONFIG.API_PROXY_URL) {
     console.info('Prado Sports AI: rota segura da API não configurada, usando dados demo.');
     return;
   }
 
   try{
-    status.style.display = 'block';
-    status.textContent = 'Conectando na API e carregando jogos reais...';
     const realMatches = await PradoAPI.fetchMatches();
     if(Array.isArray(realMatches) && realMatches.length){
       MATCHES = realMatches;
       PREDICTIONS = PradoAPI.makePredictions(realMatches);
-      NEWS = [{ icon:'✅', tag:'API conectada', title:`${realMatches.length} jogos reais carregados da API`, time:'agora' }, ...NEWS.slice(0,4)];
-      status.textContent = `✅ API conectada: ${realMatches.length} jogos reais carregados.`;
-      setTimeout(()=> status.style.display='none', 2500);
+      console.info(`Prado Sports AI: ${realMatches.length} jogos reais carregados da API.`);
     } else {
-      status.textContent = '✅ API conectada. Nenhum jogo real encontrado agora; mantendo dados demo.';
-      setTimeout(()=> status.style.display='none', 3500);
+      console.info('Prado Sports AI: API conectada, mas sem jogos reais no filtro atual.');
     }
   }catch(err){
     console.error('Erro ao carregar API:', err);
-    status.textContent = '⚠️ Não consegui carregar a API. Confira a variável APISPORTS_KEY na Vercel. O app ficou no modo demo.';
-    setTimeout(()=> status.style.display='none', 4500);
   }
 }
 
@@ -407,16 +395,19 @@ function hideMoreSub(){
 // ===================== FILTRO PREMIUM DE JOGOS =====================
 const PRADO_PRIORITY_LEAGUES = {
   WC:1000, CLUBWC:980, LIBERTA:940, SULAM:900,
-  BRA_A:930, BRA_B:760, CDB:880, ELIM:520,
-  UCL:920, UEL:840, EPL:880, LALIGA:860, SERIEA:840, BUND:830, LIGUE1:800, PORTUGAL:760,
-  MLS:650
+  BRA_A:930, BRA_B:760, CDB:880,
+  UCL:920, UEL:840, EPL:880, LALIGA:860, SERIEA:840, BUND:830, LIGUE1:800, PORTUGAL:760
 };
-const PRADO_HOME_LEAGUES = new Set(['WC','CLUBWC','BRA_A','CDB','LIBERTA','SULAM','UCL','UEL','EPL','LALIGA','SERIEA','BUND','LIGUE1','PORTUGAL','MLS']);
+// Home do Prado: só competições premium/realmente grandes.
+// Eliminatórias, amistosos, divisões menores e MLS ficam em Ver todos.
+const PRADO_HOME_LEAGUES = new Set(['WC','CLUBWC','BRA_A','CDB','LIBERTA','SULAM','UCL','UEL','EPL','LALIGA','SERIEA','BUND','LIGUE1','PORTUGAL']);
 const PRADO_EXCLUDED_HOME_WORDS = [
   'u20','u21','u23','sub 20','sub-20','youth','reserves','reserve','women','feminino',
   'npl','state league','regional','county','amateur','serie d','serie c','série d','série c',
   'paulista','carioca','mineiro','gaucho','gaúcho','capixaba','pernambucano','paraibano','potiguar',
-  'copa peru','segunda division','segunda división','liga 2','division 2','a2','a3','a4','ii'
+  'copa peru','segunda division','segunda división','liga 2','division 2','a2','a3','a4','ii',
+  'qualification','qualifier','qualifiers','qualifying','qualif','eliminatoria','eliminatorias',
+  'friendly','friendlies','amistoso','amistosos','next pro','mls next','reserve league'
 ];
 const PRADO_BIG_TEAM_WORDS = [
   'brasil','brazil','flamengo','palmeiras','corinthians','sao paulo','são paulo','botafogo','fluminense','gremio','grêmio','internacional','atletico','atlético','bahia','vasco','cruzeiro','santos',
@@ -468,14 +459,21 @@ function matchPriorityScore(m){
 function isHomeMainEligible(m){
   const lg = leagueOf(m);
   const name = textNorm(`${lg.name} ${lg.country} ${lg.tier} ${m.round||''} ${teamName(m.home)} ${teamName(m.away)}`);
-  if(PRADO_EXCLUDED_HOME_WORDS.some(w => name.includes(w))) return false;
-  if(PRADO_HOME_LEAGUES.has(m.league)) return true;
 
-  // Fora das ligas principais, só entra na Home se for um confronto realmente grande.
-  const homeName = textNorm(teamName(m.home));
-  const awayName = textNorm(teamName(m.away));
-  const bigCount = [homeName, awayName].filter(t => PRADO_BIG_TEAM_WORDS.some(w => t.includes(textNorm(w)))).length;
-  return bigCount >= 2 && matchPriorityScore(m) >= 900;
+  // Regras rígidas da Home: nada de eliminatórias, amistosos, Sub-20, reservas,
+  // estaduais/regionais, ligas pequenas ou competições com nome parecido com liga grande.
+  if(PRADO_EXCLUDED_HOME_WORDS.some(w => name.includes(w))) return false;
+  if(!PRADO_HOME_LEAGUES.has(m.league)) return false;
+
+  // Proteção extra: só aceita La Liga/Premier/Bundesliga/Serie A/Ligue 1 quando o mapeamento é canônico.
+  // Isso evita “Copa de La Liga”, “MLS Next Pro” e nomes parecidos aparecerem como principais.
+  if(m.league === 'LALIGA' && !(textNorm(lg.name) === 'la liga' && textNorm(lg.country).includes('espanha'))) return false;
+  if(m.league === 'EPL' && !textNorm(lg.country).includes('inglaterra')) return false;
+  if(m.league === 'SERIEA' && !textNorm(lg.country).includes('ital')) return false;
+  if(m.league === 'BUND' && !textNorm(lg.country).includes('alemanha')) return false;
+  if(m.league === 'LIGUE1' && !textNorm(lg.country).includes('fran')) return false;
+
+  return true;
 }
 function sortMatchesPremium(list){
   return [...list].sort((a,b)=>{
@@ -504,10 +502,10 @@ function renderHome(){
   const live = mainMatches(liveAll, 8, 700, false);
   const todayKey = todayYMD();
   const todayAll = sortMatchesPremium(MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live'));
-  const today = mainMatches(todayAll, 6, 780, false);
+  const today = mainMatches(todayAll, 6, 820, false);
   const upcomingAll = sortMatchesPremium(MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled'));
-  const upcoming = mainMatches(upcomingAll, 4, 780, false);
-  const recent = mainMatches(MATCHES.filter(m=>m.status==='finished'), 3, 780, false);
+  const upcoming = mainMatches(upcomingAll, 4, 820, false);
+  const recent = mainMatches(MATCHES.filter(m=>m.status==='finished'), 3, 820, false);
   const topPicks = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
 
   let html = '';
@@ -822,7 +820,8 @@ function renderFootballNews(){
     {id:'europa', label:'🌍 Europa'},
     {id:'mercado', label:'💰 Mercado'},
   ];
-  const allNews = NEWS.map((n,i)=> ({...n, cat: i===1?'mercado': i===2||i===3?'brasileirao': i===4?'brasileirao':'highlights'}));
+  const cleanNews = NEWS.filter(n => !String(n.tag || '').toLowerCase().includes('api') && !String(n.title || '').toLowerCase().includes('jogos reais carregados'));
+  const allNews = cleanNews.map((n,i)=> ({...n, cat: i===1?'mercado': i===2||i===3?'brasileirao': i===4?'brasileirao':'highlights'}));
   const extra = [
     {icon:'🏆', tag:'BRASILEIRÃO', title:'Rodada tem clássicos decisivos e disputa forte no G4', time:'agora', cat:'brasileirao'},
     {icon:'🇪🇺', tag:'EUROPA', title:'Clubes europeus monitoram jovens promessas do futebol brasileiro', time:'há 18 min', cat:'europa'},

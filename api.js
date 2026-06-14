@@ -147,8 +147,8 @@ const PradoAPI = (() => {
       71:'BRA_A', 72:'BRA_B', 73:'CDB',
       13:'LIBERTA', 11:'SULAM',
       2:'UCL', 3:'UEL',
-      39:'EPL', 140:'LALIGA', 78:'BUND', 135:'SERIEA', 61:'LIGUE1', 94:'PORTUGAL',
-      253:'MLS'
+      39:'EPL', 140:'LALIGA', 78:'BUND', 135:'SERIEA', 61:'LIGUE1', 94:'PORTUGAL'
+      // MLS e divisões relacionadas ficam em Outras ligas na Home
     };
     if(canonicalById[id] && LEAGUES[canonicalById[id]]) return canonicalById[id];
 
@@ -167,12 +167,13 @@ const PradoAPI = (() => {
     if(n.includes('champions league')) return 'UCL';
     if(n.includes('europa league')) return 'UEL';
     if(n.includes('premier league') && c.includes('england')) return 'EPL';
-    if(n.includes('la liga') && c.includes('spain')) return 'LALIGA';
+    if((n === 'la liga' || n === 'primera division') && c.includes('spain')) return 'LALIGA';
     if(n.includes('bundesliga')) return 'BUND';
     if(n.includes('serie a') && c.includes('italy')) return 'SERIEA';
     if(n.includes('ligue 1')) return 'LIGUE1';
     if(n.includes('primeira liga') && c.includes('portugal')) return 'PORTUGAL';
-    if(n === 'major league soccer' || n.includes('mls')) return 'MLS';
+    // Não mapear MLS Next Pro como liga principal. Ela aparece em Ver todos.
+    // if(n === 'major league soccer') return 'MLS';
 
     const code = String(league?.name || 'Liga').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/[^A-Za-z]/g,'').slice(0,8).toUpperCase() + String(league?.id || '').slice(-3);

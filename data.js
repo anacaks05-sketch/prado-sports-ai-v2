@@ -306,13 +306,13 @@ const RANKINGS = {
 
 // ---- News ----
 let NEWS = [
-  {tag:'Destaque', icon:'🔥', title:'Brasil x Argentina ao vivo: Endrick decide e Seleção vira na Copa do Mundo', time:'há 8 min'},
-  {tag:'Transferência', icon:'🔄', title:'Mbappé é especulado em troca milionária para o futebol saudita em 2027', time:'há 32 min'},
-  {tag:'Notícia', icon:'📰', title:'Flamengo confirma escalação com força máxima para clássico contra o Palmeiras', time:'há 1 h'},
-  {tag:'IA Prado', icon:'🤖', title:'Palpite do dia: nossa IA aponta favoritismo de 78% para o Flamengo no clássico', time:'há 1 h'},
-  {tag:'Lesão', icon:'🩹', title:'Zagueiro do Palmeiras é desfalque confirmado para a próxima rodada', time:'há 2 h'},
-  {tag:'Transferência', icon:'🔄', title:'São Paulo negocia contratação de atacante argentino para o segundo semestre', time:'há 3 h'},
-  {tag:'Notícia', icon:'📰', title:'Champions League: final entre Real Madrid e Manchester United já tem data confirmada', time:'há 4 h'},
+  {tag:'Destaque', icon:'🔥', title:'Rodada do futebol tem jogos importantes e placares atualizados', time:'há 8 min'},
+  {tag:'Transferência', icon:'🔄', title:'Mercado da bola segue movimentado com sondagens internacionais', time:'há 32 min'},
+  {tag:'Notícia', icon:'📰', title:'Clubes brasileiros ajustam escalações para a próxima rodada', time:'há 1 h'},
+  {tag:'IA Prado', icon:'🤖', title:'IA Prado prepara análises com base nos jogos reais carregados', time:'há 1 h'},
+  {tag:'Lesão', icon:'🩹', title:'Departamento médico dos clubes pode mudar escalações da rodada', time:'há 2 h'},
+  {tag:'Transferência', icon:'🔄', title:'Times brasileiros monitoram reforços para a sequência da temporada', time:'há 3 h'},
+  {tag:'Notícia', icon:'📰', title:'Competições europeias seguem no radar das principais análises', time:'há 4 h'},
 ];
 
 // ---- Competitions for grid ----

@@ -165,3 +165,10 @@ Esse modelo é bom para começar a vender rápido, mas ainda é uma liberação 
 
 ---
 Feito com ⚽ + 🤖 — Prado Sports AI
+
+
+## Atualização v15 — Home mais rigorosa
+
+- Remove eliminatórias, amistosos, MLS Next Pro e ligas pequenas da tela inicial.
+- Mantém esses jogos em Ver todos.
+- Corrige nomes parecidos com La Liga/MLS para não aparecerem como principais.
