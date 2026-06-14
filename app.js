@@ -443,7 +443,7 @@ function matchPriorityScore(m){
   if(m.status === 'scheduled') score += 50;
 
   // Esconde da home jogos de base, reservas e ligas regionais pequenas.
-  const smallWords = ['u20','u21','u23','sub 20','sub-20','youth','reserves','reserve','women','feminino','npl','state league','regional','county','amateur','ii'];
+  const smallWords = ['u20','u21','u23','sub 20','sub-20','youth','reserves','reserve','women','feminino','npl','state league','regional','county','amateur','serie d','série d','paulista','carioca','mineiro','gaucho','gaúcho','capixaba','pernambucano','paraibano','potiguar','copa peru','segunda division','segunda división','liga 2','division 2','ii'];
   if(smallWords.some(w => name.includes(w))) score -= 520;
   return score;
 }
@@ -454,10 +454,10 @@ function sortMatchesPremium(list){
     return String(a.date).localeCompare(String(b.date));
   });
 }
-function mainMatches(list, max=6, minScore=700){
+function mainMatches(list, max=6, minScore=700, allowFallback=false){
   const sorted = sortMatchesPremium(list);
   const important = sorted.filter(m => matchPriorityScore(m) >= minScore);
-  const selected = important.length ? important : sorted;
+  const selected = important.length || !allowFallback ? important : sorted;
   return selected.slice(0, max);
 }
 function groupedLeagueCodesPremium(byLeague){
@@ -471,13 +471,13 @@ function groupedLeagueCodesPremium(byLeague){
 // ===================== HOME =====================
 function renderHome(){
   const liveAll = sortMatchesPremium(MATCHES.filter(m=>m.status==='live'));
-  const live = mainMatches(liveAll, 8, 650);
+  const live = mainMatches(liveAll, 8, 700, false);
   const todayKey = todayYMD();
   const todayAll = sortMatchesPremium(MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live'));
-  const today = mainMatches(todayAll, 6, 650);
+  const today = mainMatches(todayAll, 6, 780, false);
   const upcomingAll = sortMatchesPremium(MATCHES.filter(m=>!isSameDay(m.date,todayKey) && m.status==='scheduled'));
-  const upcoming = mainMatches(upcomingAll, 4, 650);
-  const recent = mainMatches(MATCHES.filter(m=>m.status==='finished'), 3, 650);
+  const upcoming = mainMatches(upcomingAll, 4, 780, false);
+  const recent = mainMatches(MATCHES.filter(m=>m.status==='finished'), 3, 780, false);
   const topPicks = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
 
   let html = '';
@@ -496,14 +496,14 @@ function renderHome(){
   html += sectionHead(PRADO_ICONS.calendar + 'Jogos principais de hoje', todayAll.length>today.length?'Ver todos':null, ()=>{ goToPage('more'); showMoreSub('calendar'); });
   html += `<div class="card home-list-card">`;
   if(today.length) today.forEach(m=> html += matchRow(m));
-  else html += emptyState(PRADO_ICONS.calendar,'Sem mais jogos hoje');
+  else html += emptyState(PRADO_ICONS.calendar,'Sem jogos principais hoje. Toque em Ver todos para ver a lista completa.');
   html += `</div>`;
 
   // Upcoming
   html += sectionHead(PRADO_ICONS.next + 'Próximos jogos', 'Ver calendário', ()=>{ goToPage('more'); showMoreSub('calendar'); });
   html += `<div class="card home-list-card">`;
   if(upcoming.length) upcoming.forEach(m=> html += matchRow(m, true));
-  else html += emptyState(PRADO_ICONS.calendar,'Sem próximos jogos principais');
+  else html += emptyState(PRADO_ICONS.calendar,'Sem próximos jogos principais no momento.');
   html += `</div>`;
 
   // Recent results

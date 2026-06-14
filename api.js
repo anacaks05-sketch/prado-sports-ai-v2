@@ -164,7 +164,7 @@ const PradoAPI = (() => {
     if(n.includes('champions league')) return 'UCL';
     if(n.includes('europa league')) return 'UEL';
     if(n.includes('premier league') && c.includes('england')) return 'EPL';
-    if(n.includes('la liga')) return 'LALIGA';
+    if(n.includes('la liga') && c.includes('spain')) return 'LALIGA';
     if(n.includes('bundesliga')) return 'BUND';
     if(n.includes('serie a') && c.includes('italy')) return 'SERIEA';
     if(n.includes('ligue 1')) return 'LIGUE1';
