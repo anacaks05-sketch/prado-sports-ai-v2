@@ -172,3 +172,9 @@ Feito com ⚽ + 🤖 — Prado Sports AI
 - Remove eliminatórias, amistosos, MLS Next Pro e ligas pequenas da tela inicial.
 - Mantém esses jogos em Ver todos.
 - Corrige nomes parecidos com La Liga/MLS para não aparecerem como principais.
+
+
+## Atualização v6 — Ao vivo completo
+- A Home agora mostra todos os jogos ao vivo reais da API, não apenas os principais.
+- Quando a API está configurada, jogos demo não são misturados com os reais.
+- A Central Ao Vivo mostra a contagem de jogos reais ao vivo.

@@ -311,21 +311,29 @@ const PRADO_ICONS = {
 // ===================== REAL API LOADER =====================
 async function loadRealDataIfConfigured(){
   if (typeof PRADO_CONFIG === 'undefined' || !PRADO_CONFIG.API_PROXY_URL) {
-    console.info('Prado Sports AI: rota segura da API não configurada, usando dados demo.');
+    console.info('Prado Sports AI: rota segura da API não configurada, usando dados locais.');
     return;
   }
 
   try{
     const realMatches = await PradoAPI.fetchMatches();
-    if(Array.isArray(realMatches) && realMatches.length){
-      MATCHES = realMatches;
-      PREDICTIONS = PradoAPI.makePredictions(realMatches);
-      console.info(`Prado Sports AI: ${realMatches.length} jogos reais carregados da API.`);
+
+    // Quando a API está configurada, o app não mistura jogos demo com jogos reais.
+    // Se a API não retornar partidas naquele momento, mostramos estado vazio em vez de dados fictícios.
+    MATCHES = Array.isArray(realMatches) ? realMatches : [];
+    PREDICTIONS = PradoAPI.makePredictions(MATCHES);
+
+    if(MATCHES.length){
+      console.info(`Prado Sports AI: ${MATCHES.length} jogos reais carregados da API.`);
     } else {
-      console.info('Prado Sports AI: API conectada, mas sem jogos reais no filtro atual.');
+      console.info('Prado Sports AI: API conectada, mas sem jogos reais retornados agora.');
     }
   }catch(err){
     console.error('Erro ao carregar API:', err);
+
+    // API configurada, mas indisponível: não exibir jogos demo para não confundir o cliente.
+    MATCHES = [];
+    PREDICTIONS = [];
   }
 }
 
@@ -498,8 +506,10 @@ function groupedLeagueCodesPremium(byLeague){
 
 // ===================== HOME =====================
 function renderHome(){
+  // Ao vivo é essencial para apostadores: na Home mostramos TODOS os jogos ao vivo reais,
+  // sem limitar apenas a jogos principais. A prioridade ainda ordena os melhores primeiro.
   const liveAll = sortMatchesPremium(MATCHES.filter(m=>m.status==='live'));
-  const live = mainMatches(liveAll, 8, 700, false);
+  const live = liveAll;
   const todayKey = todayYMD();
   const todayAll = sortMatchesPremium(MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live'));
   const today = mainMatches(todayAll, 6, 820, false);
@@ -511,7 +521,7 @@ function renderHome(){
   let html = '';
 
   // Live
-  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', live.length?`${live.length} principais`:null);
+  html += sectionHead(PRADO_ICONS.live + 'Ao vivo agora', live.length?`${live.length} jogos`:null);
   if(live.length){
     html += `<div class="hscroll">`;
     live.forEach(m=> html += liveCard(m));
@@ -673,6 +683,10 @@ function renderLive(){
   }
 
   const list = sortMatchesPremium(filterMatches(state.liveFilter).filter(m=> !liveLeagueFilter || m.league===liveLeagueFilter));
+  const liveCount = MATCHES.filter(m=>m.status==='live').length;
+  if(state.liveFilter === 'live'){
+    html += `<div class="api-note">🔴 ${liveCount} jogos ao vivo reais carregados</div>`;
+  }
 
   // group by league
   const byLeague = {};
