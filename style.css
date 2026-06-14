@@ -1090,14 +1090,14 @@ main{
 .loading-spinner{ width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,.18); border-top-color:var(--accent); animation:spin .8s linear infinite; }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 
-/* Atualização v6: aviso discreto da Central Ao Vivo */
-.api-note{
-  margin: 8px 4px 12px;
-  padding: 10px 12px;
-  border: 1px solid rgba(33,230,161,.18);
-  border-radius: 16px;
-  background: rgba(33,230,161,.07);
-  color: var(--text-dim);
-  font-weight: 700;
-  font-size: 13px;
-}
+
+/* Premium real v7 */
+.ai-premium-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0 9px}
+.ai-premium-grid>div{background:rgba(255,255,255,.035);border:1px solid var(--border-soft);border-radius:12px;padding:8px;min-width:0}
+.ai-premium-grid small{display:block;color:var(--text-faint);font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.ai-premium-grid b{display:block;color:var(--text);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-card.compact{margin:0 0 10px}
+.search-results .empty{padding:28px 10px}
+.search-item{cursor:pointer}
+.search-item:hover{border-color:rgba(33,230,161,.35)}
+@media(max-width:420px){.ai-premium-grid{grid-template-columns:1fr 1fr}.ai-premium-grid>div:last-child{grid-column:1/-1}}

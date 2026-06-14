@@ -95,6 +95,10 @@ const PradoAPI = (() => {
     const tz = timezone();
     const days = Math.max(0, Math.min(4, Number(PRADO_CONFIG.DAYS_AHEAD || 2)));
 
+    // Ao vivo primeiro: apostadores querem todos os jogos em tempo real.
+    // Se o plano/fornecedor não aceitar live=all, safeGet só ignora e seguimos por data.
+    mergeFixtures(byId, await safeGet('ao vivo', 'fixtures', { live: 'all', timezone: tz }));
+
     // Plano grátis da API-Football não aceita o parâmetro `next`.
     // Por isso buscamos por data: hoje + próximos dias, no fuso do Brasil.
     for(let i=0; i<=days; i++){
@@ -212,36 +216,90 @@ const PradoAPI = (() => {
       as: item.goals?.away ?? 0,
       venue: [item.fixture.venue?.name, item.fixture.venue?.city].filter(Boolean).join(', '),
       round: item.league?.round || '',
-      stats: {
-        possession:[50,50], shotsOnTarget:[0,0], shotsOffTarget:[0,0], corners:[0,0], fouls:[0,0],
-        yellow:[0,0], red:[0,0], xg:[0,0], xa:[0,0], dangerousAttacks:[0,0]
-      },
+      stats: null,
       events: []
     };
   }
 
+  function makePredictionForMatch(m, i=0){
+    if(!m) return null;
+    const homeName = (typeof TEAMS !== 'undefined' && TEAMS[m.home]?.name) ? TEAMS[m.home].name : 'Mandante';
+    const awayName = (typeof TEAMS !== 'undefined' && TEAMS[m.away]?.name) ? TEAMS[m.away].name : 'Visitante';
+    const totalGoals = Number(m.hs||0) + Number(m.as||0);
+    const minute = Number(m.minute||0);
+    let homeProb = 43;
+    let drawProb = 28;
+    let awayProb = 29;
+    const reasons = [];
+    const markets = [];
+    let risk = 'Médio';
+    let signal = 'Análise';
+    let pick = `${homeName} ou empate`;
+
+    if(m.status === 'live'){
+      signal = 'Ao vivo';
+      reasons.push(`Jogo ao vivo aos ${minute || '—'} minutos com placar ${m.hs}x${m.as}.`);
+      if(m.hs > m.as){
+        homeProb += 18 + Math.min(10, (m.hs - m.as) * 5);
+        awayProb -= 8;
+        pick = `${homeName} ou empate`;
+        markets.push({label:'Mandante ou empate', type:'blue'});
+      } else if(m.as > m.hs){
+        awayProb += 18 + Math.min(10, (m.as - m.hs) * 5);
+        homeProb -= 8;
+        pick = `${awayName} ou empate`;
+        markets.push({label:'Visitante ou empate', type:'blue'});
+      } else {
+        drawProb += 6;
+        pick = totalGoals >= 2 ? 'Próximo gol com cautela' : 'Over 1.5 gols';
+        markets.push({label:totalGoals >= 2 ? 'Próximo gol' : 'Over 1.5 gols', type:''});
+      }
+      if(totalGoals >= 1) markets.push({label:'Over 1.5 gols', type:''});
+      if(totalGoals >= 2) markets.push({label:'Over 2.5 gols', type:'gold'});
+      if(minute >= 70 && Math.abs((m.hs||0)-(m.as||0)) <= 1){
+        markets.push({label:'Evitar odd baixa no fim', type:'muted'});
+        risk = 'Médio/Alto';
+      }
+    } else if(m.status === 'scheduled'){
+      signal = 'Pré-jogo';
+      homeProb += 8 + (i % 5);
+      awayProb -= 3;
+      pick = `${homeName} ou empate`;
+      markets.push({label:'Mandante ou empate', type:'blue'});
+      markets.push({label:'Over 1.5 gols', type:''});
+      reasons.push('Pré-jogo: peso do mando de campo e perfil da competição considerados.');
+    } else {
+      signal = 'Pós-jogo';
+      pick = 'Sem entrada — jogo encerrado';
+      markets.push({label:'Apenas estudo pós-jogo', type:'muted'});
+      reasons.push(`Partida encerrada em ${m.hs}x${m.as}. Use apenas para leitura de resultado.`);
+      risk = 'Alto';
+    }
+
+    reasons.push('Dados carregados pela API-Football/API-Sports em tempo real.');
+    reasons.push('Quando estatísticas, odds e escalações estiverem disponíveis, a confiança da IA fica mais precisa.');
+
+    let sum = Math.max(1, homeProb + drawProb + awayProb);
+    const probs = {
+      home: Math.round(homeProb/sum*100),
+      draw: Math.round(drawProb/sum*100),
+      away: Math.round(awayProb/sum*100)
+    };
+    const delta = 100 - (probs.home + probs.draw + probs.away);
+    probs.home += delta;
+    const confidence = Math.max(42, Math.min(84, Math.max(probs.home, probs.draw, probs.away) + (m.status === 'live' ? 12 : 6)));
+    if(!markets.length) markets.push({label:'Sem entrada segura', type:'muted'});
+    markets.push({label:`Risco: ${risk}`, type:risk.includes('Alto')?'muted':'blue'});
+    return { matchId:m.id, confidence, pick, probs, markets:markets.slice(0,5), reasons:reasons.slice(0,5), risk, signal };
+  }
+
   function makePredictions(matches){
-    return matches.filter(m => m.status === 'scheduled').slice(0,12).map((m, i) => {
-      const homeProb = 42 + (i % 4) * 4;
-      const drawProb = 28;
-      const awayProb = Math.max(10, 100 - homeProb - drawProb);
-      return {
-        matchId: m.id,
-        confidence: Math.min(78, homeProb + 14),
-        pick: TEAMS[m.home]?.name || 'Mandante',
-        probs:{home:homeProb, draw:drawProb, away:awayProb},
-        markets:[
-          {label:'Mandante ou empate', type:'blue'},
-          {label:'Over 1.5 gols', type:''},
-          {label:'Ambas marcam', type:'gold'}
-        ],
-        reasons:[
-          'Jogo carregado da API-Sports em tempo real.',
-          'A próxima etapa é conectar odds e estatísticas avançadas para melhorar a confiança da IA.',
-          'Este card já está pronto para receber análise premium mais completa.'
-        ]
-      };
-    });
+    return (matches || [])
+      .filter(m => m && (m.status === 'live' || m.status === 'scheduled'))
+      .map((m, i) => makePredictionForMatch(m, i))
+      .filter(Boolean)
+      .sort((a,b)=>b.confidence-a.confidence)
+      .slice(0,30);
   }
 
   function numValue(v){
@@ -346,8 +404,7 @@ const PradoAPI = (() => {
     const events = mapEvents(eventsRes, match);
     const lineups = mapLineups(lineupsRes);
 
-    if(stats) match.stats = stats;
-    else if(match.stats && Object.values(match.stats).flat().every(v => Number(v) === 0)) match.stats = null;
+    match.stats = stats || null;
 
     match.events = events;
     if(lineups) match.lineups = lineups;
@@ -355,5 +412,5 @@ const PradoAPI = (() => {
     return match;
   }
 
-  return { fetchMatches, makePredictions, fetchMatchDetails };
+  return { fetchMatches, makePredictions, makePredictionForMatch, fetchMatchDetails };
 })();

@@ -173,8 +173,12 @@ Feito com ⚽ + 🤖 — Prado Sports AI
 - Mantém esses jogos em Ver todos.
 - Corrige nomes parecidos com La Liga/MLS para não aparecerem como principais.
 
+## Atualização v17 — Premium real / sem demos falsos
 
-## Atualização v6 — Ao vivo completo
-- A Home agora mostra todos os jogos ao vivo reais da API, não apenas os principais.
-- Quando a API está configurada, jogos demo não são misturados com os reais.
-- A Central Ao Vivo mostra a contagem de jogos reais ao vivo.
+- Ao Vivo agora tenta buscar `live=all` e mostra todos os jogos reais ao vivo.
+- IA Premium gera leitura para partidas ao vivo e pré-jogo com sinal, risco, confiança, mercados sugeridos e motivos.
+- Pesquisa agora só mostra resultados após digitar pelo menos 2 letras e abre a partida correta.
+- Estatísticas não exibem mais 50/50 falso: se a API não liberar dados, o app mostra aviso claro.
+- Aba IA dentro do jogo gera uma leitura mesmo quando a API não liberar estatísticas, mas reduz a confiança.
+- Recentes das notificações não usam mais demos falsos; mostram apenas jogos reais ao vivo/encerrados.
+- Notificações são locais neste pacote. Para push real em segundo plano, conectar OneSignal ou backend Web Push.

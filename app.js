@@ -311,29 +311,21 @@ const PRADO_ICONS = {
 // ===================== REAL API LOADER =====================
 async function loadRealDataIfConfigured(){
   if (typeof PRADO_CONFIG === 'undefined' || !PRADO_CONFIG.API_PROXY_URL) {
-    console.info('Prado Sports AI: rota segura da API não configurada, usando dados locais.');
+    console.info('Prado Sports AI: rota segura da API não configurada, usando dados demo.');
     return;
   }
 
   try{
     const realMatches = await PradoAPI.fetchMatches();
-
-    // Quando a API está configurada, o app não mistura jogos demo com jogos reais.
-    // Se a API não retornar partidas naquele momento, mostramos estado vazio em vez de dados fictícios.
-    MATCHES = Array.isArray(realMatches) ? realMatches : [];
-    PREDICTIONS = PradoAPI.makePredictions(MATCHES);
-
-    if(MATCHES.length){
-      console.info(`Prado Sports AI: ${MATCHES.length} jogos reais carregados da API.`);
+    if(Array.isArray(realMatches) && realMatches.length){
+      MATCHES = realMatches;
+      PREDICTIONS = PradoAPI.makePredictions(realMatches);
+      console.info(`Prado Sports AI: ${realMatches.length} jogos reais carregados da API.`);
     } else {
-      console.info('Prado Sports AI: API conectada, mas sem jogos reais retornados agora.');
+      console.info('Prado Sports AI: API conectada, mas sem jogos reais no filtro atual.');
     }
   }catch(err){
     console.error('Erro ao carregar API:', err);
-
-    // API configurada, mas indisponível: não exibir jogos demo para não confundir o cliente.
-    MATCHES = [];
-    PREDICTIONS = [];
   }
 }
 
@@ -506,9 +498,8 @@ function groupedLeagueCodesPremium(byLeague){
 
 // ===================== HOME =====================
 function renderHome(){
-  // Ao vivo é essencial para apostadores: na Home mostramos TODOS os jogos ao vivo reais,
-  // sem limitar apenas a jogos principais. A prioridade ainda ordena os melhores primeiro.
   const liveAll = sortMatchesPremium(MATCHES.filter(m=>m.status==='live'));
+  // Ao vivo mostra todos os jogos reais. Apostador gosta de tela cheia no live.
   const live = liveAll;
   const todayKey = todayYMD();
   const todayAll = sortMatchesPremium(MATCHES.filter(m=>isSameDay(m.date, todayKey) && m.status!=='live'));
@@ -560,17 +551,22 @@ function renderHome(){
   // AI ranking
   html += sectionHead(PRADO_ICONS.ai + 'Ranking dos melhores palpites', 'Ver IA completa', ()=> goToPage('ai'));
   html += `<div class="card" style="padding:4px 10px">`;
-  topPicks.forEach((p,i)=>{
-    const m = MATCHES.find(x=>x.id===p.matchId);
-    html += `<div class="rank-row" onclick="openMatchDetail('${m.id}','ai')" style="cursor:pointer">
-      <div class="rank-pos">${i+1}</div>
-      <div class="rank-info">
-        <div class="rank-name">${teamName(m.home)} x ${teamName(m.away)}</div>
-        <div class="rank-sub">Palpite IA: ${p.pick} · ${leagueOf(m).name}</div>
-      </div>
-      <div class="rank-val" style="color:var(--accent)">${p.confidence}%<small>confiança</small></div>
-    </div>`;
-  });
+  if(topPicks.length){
+    topPicks.forEach((p,i)=>{
+      const m = MATCHES.find(x=>x.id===p.matchId);
+      if(!m) return;
+      html += `<div class="rank-row" onclick="openMatchDetail('${m.id}','ai')" style="cursor:pointer">
+        <div class="rank-pos">${i+1}</div>
+        <div class="rank-info">
+          <div class="rank-name">${teamName(m.home)} x ${teamName(m.away)}</div>
+          <div class="rank-sub">Sinal IA: ${p.pick} · ${leagueOf(m).name}</div>
+        </div>
+        <div class="rank-val" style="color:var(--accent)">${p.confidence}%<small>confiança</small></div>
+      </div>`;
+    });
+  } else {
+    html += emptyState(PRADO_ICONS.ai,'A IA vai listar oportunidades quando houver jogos com dados suficientes.');
+  }
   html += `</div>`;
 
   document.getElementById('page-home').innerHTML = html;
@@ -683,10 +679,6 @@ function renderLive(){
   }
 
   const list = sortMatchesPremium(filterMatches(state.liveFilter).filter(m=> !liveLeagueFilter || m.league===liveLeagueFilter));
-  const liveCount = MATCHES.filter(m=>m.status==='live').length;
-  if(state.liveFilter === 'live'){
-    html += `<div class="api-note">🔴 ${liveCount} jogos ao vivo reais carregados</div>`;
-  }
 
   // group by league
   const byLeague = {};
@@ -750,75 +742,186 @@ function filterMatches(filter){
 }
 
 // ===================== AI PREDICTIONS =====================
+
+function getPredictionForMatch(match){
+  if(!match) return null;
+  const existing = PREDICTIONS.find(x=>x.matchId===match.id);
+  if(existing) return existing;
+  return buildLocalAIInsight(match);
+}
+function clamp(n,min,max){ return Math.max(min, Math.min(max, Number(n)||0)); }
+function teamShortName(code){ return teamName(code).replace(/\s+(FC|SC|EC|AC|Clube)$/i,'').trim(); }
+function buildLocalAIInsight(m){
+  if(!m) return null;
+  const stats = m.stats || null;
+  const hasStats = statsHasValues(stats);
+  const home = teamShortName(m.home);
+  const away = teamShortName(m.away);
+  const totalGoals = Number(m.hs||0) + Number(m.as||0);
+  const minute = Number(m.minute||0);
+  let homeSignal = 44;
+  let drawSignal = 28;
+  let awaySignal = 28;
+  const reasons = [];
+  const markets = [];
+  let risk = 'Médio';
+  let signal = 'Observação';
+  let pick = 'Aguardar melhor oportunidade';
+
+  if(m.status === 'live'){
+    reasons.push(`Partida ao vivo aos ${minute || '—'} minutos, com placar ${m.hs}x${m.as}.`);
+    if(m.hs > m.as){
+      homeSignal += 18 + Math.min(12, m.hs - m.as)*4;
+      awaySignal -= 10;
+      pick = `${home} ou empate`;
+      markets.push({label:'Mandante ou empate', type:'blue'});
+      signal = 'Proteção no placar';
+    } else if(m.as > m.hs){
+      awaySignal += 18 + Math.min(12, m.as - m.hs)*4;
+      homeSignal -= 10;
+      pick = `${away} ou empate`;
+      markets.push({label:'Visitante ou empate', type:'blue'});
+      signal = 'Proteção no placar';
+    } else {
+      drawSignal += 8;
+      pick = totalGoals >= 2 ? 'Over 2.5 / Próximo gol' : 'Over 1.5 gols';
+      markets.push({label: totalGoals >= 2 ? 'Próximo gol com cautela' : 'Over 1.5 gols', type:''});
+      signal = 'Jogo aberto';
+    }
+    if(totalGoals >= 1) markets.push({label:'Over 1.5 gols', type:''});
+    if(totalGoals >= 2) markets.push({label:'Over 2.5 gols', type:'gold'});
+  } else if(m.status === 'scheduled'){
+    reasons.push('Jogo pré-live: análise baseada no peso da liga, mando de campo e força relativa do confronto.');
+    homeSignal += 8;
+    pick = `${home} ou empate`;
+    markets.push({label:'Mandante ou empate', type:'blue'});
+    markets.push({label:'Over 1.5 gols', type:''});
+    signal = 'Pré-jogo';
+  } else {
+    reasons.push(`Jogo encerrado com placar ${m.hs}x${m.as}. Use para estudo, não para entrada.`);
+    pick = 'Sem entrada — jogo encerrado';
+    markets.push({label:'Apenas análise pós-jogo', type:'muted'});
+    signal = 'Encerrado';
+    risk = 'Alto';
+  }
+
+  if(hasStats){
+    const hShots = Number(stats.shotsOnTarget?.[0]||0) + Number(stats.shotsOffTarget?.[0]||0);
+    const aShots = Number(stats.shotsOnTarget?.[1]||0) + Number(stats.shotsOffTarget?.[1]||0);
+    const hCorners = Number(stats.corners?.[0]||0);
+    const aCorners = Number(stats.corners?.[1]||0);
+    const hPoss = Number(stats.possession?.[0]||0);
+    const aPoss = Number(stats.possession?.[1]||0);
+    const pressureHome = hShots + hCorners*1.5 + Math.max(0,hPoss-50)/5;
+    const pressureAway = aShots + aCorners*1.5 + Math.max(0,aPoss-50)/5;
+    if(pressureHome > pressureAway + 3){
+      homeSignal += 10;
+      reasons.push(`${home} aparece com mais volume ofensivo nos dados disponíveis.`);
+      markets.push({label:`Pressão ${home}`, type:'gold'});
+    } else if(pressureAway > pressureHome + 3){
+      awaySignal += 10;
+      reasons.push(`${away} aparece com mais volume ofensivo nos dados disponíveis.`);
+      markets.push({label:`Pressão ${away}`, type:'gold'});
+    } else {
+      reasons.push('Estatísticas equilibradas até aqui; entrada precisa de cautela.');
+      risk = 'Médio/Alto';
+    }
+    if(hCorners + aCorners >= 6) markets.push({label:'Mais escanteios ao vivo', type:'gold'});
+  } else {
+    reasons.push('A API ainda não liberou estatísticas completas; a IA reduz a confiança e evita entrada agressiva.');
+    risk = m.status === 'live' ? 'Médio/Alto' : 'Médio';
+  }
+
+  let total = Math.max(1, homeSignal + drawSignal + awaySignal);
+  let probs = {
+    home: Math.round(homeSignal/total*100),
+    draw: Math.round(drawSignal/total*100),
+    away: Math.round(awaySignal/total*100)
+  };
+  const sum = probs.home + probs.draw + probs.away;
+  if(sum !== 100) probs.home += 100 - sum;
+  const maxProb = Math.max(probs.home, probs.draw, probs.away);
+  const confidence = clamp(maxProb + (hasStats ? 12 : 3) + (m.status === 'live' ? 6 : 0), 38, 84);
+  if(!markets.length) markets.push({label:'Sem entrada segura', type:'muted'});
+  markets.push({label:`Risco: ${risk}`, type:risk.includes('Alto')?'muted':'blue'});
+  return { matchId:m.id, confidence, pick, probs, markets:markets.slice(0,5), reasons:reasons.slice(0,5), risk, signal };
+}
+function aiCardHTML(p, m, compact=false){
+  const lg = leagueOf(m);
+  const ringColor = p.confidence>=70 ? 'var(--accent)' : p.confidence>=55 ? 'var(--gold)' : 'var(--blue)';
+  const circumference = 2*Math.PI*27;
+  const offset = circumference * (1 - p.confidence/100);
+  const statusLine = m.status==='live' ? `🔴 ${m.minute}' · ao vivo` : (m.status==='finished' ? `FIM · ${fmtDate(m.date)}` : `${fmtDate(m.date)} ${fmtTime(m.date)}`);
+  return `<div class="card ai-card ${compact?'compact':''}">
+    <div class="ai-head">
+      <div class="ai-league">${lg.icon} ${lg.name}${m.round ? ` · ${m.round}` : ''}</div>
+      <div class="ai-time">${statusLine}</div>
+    </div>
+    <div class="matchup">
+      <div class="vs-teams">
+        <div class="t">${crestHTML(m.home)}${teamName(m.home)}</div>
+        <div class="t">${crestHTML(m.away)}${teamName(m.away)}</div>
+      </div>
+      <div class="confidence-ring">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle class="ring-bg" cx="32" cy="32" r="27"/>
+          <circle class="ring-fg" cx="32" cy="32" r="27" style="stroke:${ringColor};stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
+        </svg>
+        <div class="ring-val"><b>${p.confidence}%</b><small>IA</small></div>
+      </div>
+    </div>
+    <div class="ai-premium-grid">
+      <div><small>Sinal</small><b>${p.signal || 'Análise'}</b></div>
+      <div><small>Risco</small><b>${p.risk || 'Médio'}</b></div>
+      <div><small>Placar</small><b>${m.status==='scheduled'?'Pré-jogo':`${m.hs}x${m.as}`}</b></div>
+    </div>
+    <div class="prob-bars">
+      <span style="width:${p.probs.home}%;background:var(--accent)"></span>
+      <span style="width:${p.probs.draw}%;background:var(--text-faint)"></span>
+      <span style="width:${p.probs.away}%;background:var(--blue)"></span>
+    </div>
+    <div class="prob-legend">
+      <span><b>${p.probs.home}%</b> ${teamName(m.home)}</span>
+      <span><b>${p.probs.draw}%</b> Empate</span>
+      <span><b>${p.probs.away}%</b> ${teamName(m.away)}</span>
+    </div>
+    <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:4px">Leitura da IA: <b style="color:var(--text)">${p.pick}</b></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px">Motivos</div>
+    <ul class="ai-reasons">${p.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+    <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px">Mercados sugeridos</div>
+    <div class="market-tags">${p.markets.map(mk=>`<span class="market-tag ${mk.type || ''}">${mk.label}</span>`).join('')}</div>
+    ${compact ? '' : `<div class="ai-footer"><div class="btn ghost" onclick="openMatchDetail('${m.id}','ai')">📊 Ver partida</div><div class="btn primary" onclick="addToTicket('${m.id}')">🎟️ Add. ao bilhete</div></div>`}
+  </div>`;
+}
 function renderAI(){
   let html = `<div class="section-head" style="margin-top:4px"><div class="section-title display">🤖 IA de Palpites</div></div>`;
   html += `<div class="card" style="padding:12px;margin-bottom:14px;background:var(--grad-card)">
     <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5">
-      Nossa IA analisa <b style="color:var(--text)">forma recente, desfalques, mando de campo, histórico de confrontos e xG/xA</b> para gerar probabilidades e recomendações de mercado para cada partida.
+      IA Premium com leitura de <b style="color:var(--text)">placar, minuto, pressão, estatísticas quando disponíveis e risco da entrada</b>. Ela mostra oportunidades, mas também avisa quando é melhor esperar.
     </div>
   </div>`;
 
-  const sorted = [...PREDICTIONS].sort((a,b)=>b.confidence-a.confidence);
-  sorted.forEach(p=>{
-    const m = MATCHES.find(x=>x.id===p.matchId);
-    const lg = leagueOf(m);
-    const ringColor = p.confidence>=70 ? 'var(--accent)' : p.confidence>=55 ? 'var(--gold)' : 'var(--blue)';
-    const circumference = 2*Math.PI*27;
-    const offset = circumference * (1 - p.confidence/100);
+  const picks = [...PREDICTIONS]
+    .map(p => ({ p, m: MATCHES.find(x=>x.id===p.matchId) }))
+    .filter(x => x.m)
+    .sort((a,b)=>b.p.confidence-a.p.confidence);
 
-    html += `<div class="card ai-card">
-      <div class="ai-head">
-        <div class="ai-league">${lg.icon} ${lg.name} · ${m.round||''}</div>
-        <div class="ai-time">${m.status==='live' ? `🔴 ${m.minute}'` : fmtDate(m.date)+' '+fmtTime(m.date)}</div>
-      </div>
-      <div class="matchup">
-        <div class="vs-teams">
-          <div class="t">${crestHTML(m.home)}${teamName(m.home)}</div>
-          <div class="t">${crestHTML(m.away)}${teamName(m.away)}</div>
-        </div>
-        <div class="confidence-ring">
-          <svg width="64" height="64" viewBox="0 0 64 64">
-            <circle class="ring-bg" cx="32" cy="32" r="27"/>
-            <circle class="ring-fg" cx="32" cy="32" r="27" style="stroke:${ringColor};stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
-          </svg>
-          <div class="ring-val"><b>${p.confidence}%</b><small>IA</small></div>
-        </div>
-      </div>
-
-      <div class="prob-bars">
-        <span style="width:${p.probs.home}%;background:var(--accent)"></span>
-        <span style="width:${p.probs.draw}%;background:var(--text-faint)"></span>
-        <span style="width:${p.probs.away}%;background:var(--blue)"></span>
-      </div>
-      <div class="prob-legend">
-        <span><b>${p.probs.home}%</b> ${teamName(m.home)}</span>
-        <span><b>${p.probs.draw}%</b> Empate</span>
-        <span><b>${p.probs.away}%</b> ${teamName(m.away)}</span>
-      </div>
-
-      <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:4px">Palpite da IA: <b style="color:var(--text)">${p.pick}</b></div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px">Por que a IA pensa assim</div>
-      <ul class="ai-reasons">${p.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-
-      <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px">Mercados sugeridos</div>
-      <div class="market-tags">${p.markets.map(mk=>`<span class="market-tag ${mk.type}">${mk.label}</span>`).join('')}</div>
-
-      <div class="ai-footer">
-        <div class="btn ghost" onclick="openMatchDetail('${m.id}')">📊 Ver partida</div>
-        <div class="btn primary" onclick="addToTicket('${m.id}')">🎟️ Add. ao bilhete</div>
-      </div>
-    </div>`;
-  });
+  if(!picks.length){
+    html += emptyState(PRADO_ICONS.ai,'Nenhuma oportunidade premium encontrada agora. Abra a Central Ao Vivo para escolher uma partida.');
+  } else {
+    picks.slice(0,20).forEach(({p,m})=>{ html += aiCardHTML(p,m,false); });
+  }
 
   document.getElementById('page-ai').innerHTML = html;
 }
 
 let ticket = [];
 function addToTicket(matchId){
-  const p = PREDICTIONS.find(x=>x.matchId===matchId);
   const m = MATCHES.find(x=>x.id===matchId);
+  const p = getPredictionForMatch(m);
+  if(!m || !p){ toast('A IA ainda não tem sinal para esse jogo.','⚠️'); return; }
   if(ticket.find(t=>t.matchId===matchId)){ toast('Esse jogo já está no seu bilhete','ℹ️'); return; }
-  ticket.push({matchId, pick:p.pick, market:p.markets[0].label});
+  ticket.push({matchId, pick:p.pick, market:p.markets[0]?.label || p.pick});
   toast(`${teamName(m.home)} x ${teamName(m.away)} adicionado ao bilhete (${ticket.length} jogos)`, '🎟️');
 }
 
@@ -1172,26 +1275,36 @@ function renderScannerSub(){
 }
 
 // ---- Notifications ----
-const NOTIF_FEED = [
-  {icon:'⚽', text:'GOL! Brasil 2x1 Argentina — Endrick', time:'2 min'},
-  {icon:'🟨', text:'Cartão amarelo: Otamendi (Argentina)', time:'24 min'},
-  {icon:'🔔', text:'Flamengo x Palmeiras começa em 1h', time:'58 min'},
-  {icon:'🏁', text:'Fim de jogo: Atlético-MG 1x0 Fluminense', time:'há 3h'},
-];
+function buildRealNotificationFeed(){
+  const feed = [];
+  MATCHES.filter(m => m.status === 'live').slice(0,8).forEach(m=>{
+    feed.push({icon:'🔴', text:`${teamName(m.home)} ${m.hs}x${m.as} ${teamName(m.away)} — ${m.minute || 0}'`, time:'ao vivo', matchId:m.id});
+  });
+  MATCHES.filter(m => m.status === 'finished').slice(0,6).forEach(m=>{
+    feed.push({icon:'🏁', text:`Fim de jogo: ${teamName(m.home)} ${m.hs}x${m.as} ${teamName(m.away)}`, time:fmtDate(m.date), matchId:m.id});
+  });
+  return feed;
+}
 function renderNotificationsSub(){
   const permission = ('Notification' in window) ? Notification.permission : 'unsupported';
+  const supported = ('Notification' in window);
   let h = `<div class="card notif-permission">
-    <div><b>🔔 Notificações do Prado</b><span>Status: ${permission==='granted'?'ativadas':permission==='denied'?'bloqueadas':'aguardando permissão'}</span></div>
+    <div><b>🔔 Notificações do Prado</b><span>Status: ${permission==='granted'?'ativadas neste aparelho':permission==='denied'?'bloqueadas no navegador':'aguardando permissão'}</span></div>
     <button class="btn primary" onclick="enableNotifications()">Ativar</button>
+  </div>`;
+  h += `<div class="card" style="padding:12px;margin-bottom:14px;background:var(--grad-card)">
+    <div style="font-size:12px;color:var(--text-dim);line-height:1.45">
+      Alertas locais funcionam quando o app está instalado/aberto neste aparelho. Para push automático em segundo plano para todos os clientes, a próxima etapa é conectar OneSignal ou backend de push.
+    </div>
   </div>`;
   h += `<div class="menu-label">Tipos de alerta</div><div class="card" style="padding:0 12px;margin-bottom:16px">`;
   const items = [
-    {key:'gol', label:'Gols', sub:'Alerta imediato a cada gol marcado'},
-    {key:'cartao', label:'Cartões', sub:'Amarelos e vermelhos em jogos favoritos'},
-    {key:'escanteio', label:'Escanteios', sub:'A cada escanteio em jogos favoritos'},
-    {key:'inicio', label:'Início do jogo', sub:'Aviso quando a partida começar'},
+    {key:'gol', label:'Gols', sub:'Alerta em jogos favoritos quando houver atualização real'},
+    {key:'cartao', label:'Cartões', sub:'Amarelos e vermelhos quando a API liberar evento'},
+    {key:'escanteio', label:'Escanteios', sub:'Disponível quando houver estatísticas ao vivo'},
+    {key:'inicio', label:'Início do jogo', sub:'Aviso quando partida favorita começar'},
     {key:'fim', label:'Final do jogo', sub:'Resultado final do jogo favorito'},
-    {key:'entrada', label:'Entrada em campo', sub:'Escalação confirmada e times em campo'},
+    {key:'entrada', label:'Entrada em campo', sub:'Escalação confirmada quando a API liberar'},
   ];
   items.forEach(it=>{
     h += `<div class="setting-row">
@@ -1200,9 +1313,14 @@ function renderNotificationsSub(){
     </div>`;
   });
   h += `</div>`;
-  h += `<button class="btn ghost" style="margin-bottom:14px" onclick="sendTestNotification()">Enviar teste</button>`;
-  h += `<div class="menu-label">Recentes</div><div class="card" style="padding:0 10px">`;
-  NOTIF_FEED.forEach(n=> h += `<div class="news-card"><div class="news-thumb" style="font-size:20px">${n.icon}</div><div class="news-body"><div class="news-title">${n.text}</div><div class="news-meta">há ${n.time}</div></div></div>`);
+  h += `<button class="btn ghost" style="margin-bottom:14px" onclick="sendTestNotification()">Enviar teste local</button>`;
+  h += `<div class="menu-label">Recentes reais</div><div class="card" style="padding:0 10px">`;
+  const feed = buildRealNotificationFeed();
+  if(feed.length){
+    feed.forEach(n=> h += `<div class="news-card" onclick="openMatchDetail('${n.matchId}')"><div class="news-thumb" style="font-size:20px">${n.icon}</div><div class="news-body"><div class="news-title">${n.text}</div><div class="news-meta">${n.time}</div></div></div>`);
+  } else {
+    h += emptyState('🔔','Nenhum alerta real recente. Favoritar jogos ajuda a acompanhar eventos importantes.');
+  }
   h += `</div>`;
   return h;
 }
@@ -1210,13 +1328,13 @@ function renderNotificationsSub(){
 function enableNotifications(){
   if(!('Notification' in window)){ toast('Este navegador não suporta notificações.','⚠️'); return; }
   Notification.requestPermission().then(status=>{
-    toast(status==='granted' ? 'Notificações ativadas com sucesso!' : 'Permissão não liberada no navegador.', status==='granted'?'🔔':'⚠️');
+    toast(status==='granted' ? 'Notificações locais ativadas!' : 'Permissão não liberada no navegador.', status==='granted'?'🔔':'⚠️');
     renderMoreSub('notifications');
   });
 }
 function sendTestNotification(){
   if('Notification' in window && Notification.permission==='granted'){
-    new Notification('Prado Sports AI', { body:'Teste de alerta funcionando ✅', icon:'./icons/icon-192.png' });
+    new Notification('Prado Sports AI', { body:'Teste local funcionando ✅ Para push real 24h, conecte OneSignal/backend.', icon:'./icons/icon-192.png' });
     toast('Notificação de teste enviada.','🔔');
   } else {
     toast('Ative as notificações primeiro.','🔔');
@@ -1305,7 +1423,7 @@ function renderAboutSub(){
   <div class="card" style="padding:14px;font-size:12.5px;color:var(--text-dim);line-height:1.6">
     Estatísticas de futebol em tempo real, palpites com inteligência artificial e tudo sobre os principais campeonatos do mundo — Brasileirão, Champions League, Libertadores, Premier League e a Copa do Mundo 2026.
     <br><br>
-    Os dados exibidos nesta versão são <b style="color:var(--text)">demonstrativos</b>. Conecte uma API gratuita de futebol (veja o README) para dados ao vivo reais.
+    Os jogos são carregados pela API-Football/API-Sports quando a chave está ativa na Vercel. Se a API não liberar algum detalhe, o app mostra essa limitação sem inventar dados.
   </div>`;
 }
 
@@ -1400,7 +1518,11 @@ function detailLoading(text){
 }
 function statsHasValues(stats){
   if(!stats) return false;
-  return Object.values(stats).flat().some(v => Number(v) > 0);
+  const keys = ['shotsOnTarget','shotsOffTarget','corners','fouls','yellow','red','xg','xa','dangerousAttacks'];
+  if(keys.some(k => Array.isArray(stats[k]) && stats[k].some(v => Number(v) > 0))) return true;
+  const poss = stats.possession;
+  if(Array.isArray(poss) && (Number(poss[0]) !== 50 || Number(poss[1]) !== 50) && (Number(poss[0]) + Number(poss[1]) > 0)) return true;
+  return false;
 }
 
 function detailResumo(m){
@@ -1568,40 +1690,10 @@ function getCSS(varName){
 }
 
 function detailAI(m){
-  const p = PREDICTIONS.find(x=>x.matchId===m.id);
-  if(!p) return emptyState('🤖','A IA ainda não gerou um palpite para esta partida.');
-  const circumference = 2*Math.PI*27;
-  const offset = circumference * (1 - p.confidence/100);
-  return `<div class="card ai-card" style="margin-bottom:10px">
-    <div class="matchup">
-      <div class="vs-teams">
-        <div class="t">${crestHTML(m.home)}${teamName(m.home)}</div>
-        <div class="t">${crestHTML(m.away)}${teamName(m.away)}</div>
-      </div>
-      <div class="confidence-ring">
-        <svg width="64" height="64" viewBox="0 0 64 64">
-          <circle class="ring-bg" cx="32" cy="32" r="27"/>
-          <circle class="ring-fg" cx="32" cy="32" r="27" style="stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
-        </svg>
-        <div class="ring-val"><b>${p.confidence}%</b><small>IA</small></div>
-      </div>
-    </div>
-    <div class="prob-bars">
-      <span style="width:${p.probs.home}%;background:var(--accent)"></span>
-      <span style="width:${p.probs.draw}%;background:var(--text-faint)"></span>
-      <span style="width:${p.probs.away}%;background:var(--blue)"></span>
-    </div>
-    <div class="prob-legend">
-      <span><b>${p.probs.home}%</b> ${teamName(m.home)}</span>
-      <span><b>${p.probs.draw}%</b> Empate</span>
-      <span><b>${p.probs.away}%</b> ${teamName(m.away)}</span>
-    </div>
-    <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:4px">Palpite da IA: <b style="color:var(--text)">${p.pick}</b></div>
-    <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px">Motivos</div>
-    <ul class="ai-reasons">${p.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-    <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px">Mercados sugeridos</div>
-    <div class="market-tags">${p.markets.map(mk=>`<span class="market-tag ${mk.type}">${mk.label}</span>`).join('')}</div>
-  </div>`;
+  if(m.detailsLoading) return detailLoading('Gerando leitura da IA com os dados reais da partida...');
+  const p = getPredictionForMatch(m);
+  if(!p) return emptyState('🤖','A IA não encontrou dados mínimos para esta partida.');
+  return aiCardHTML(p,m,true);
 }
 
 function detailH2H(m){
@@ -1640,21 +1732,44 @@ function openSearch(){
 }
 function closeSearch(){ document.getElementById('search-overlay')?.classList.remove('open'); }
 function renderSearchResults(q){
-  const term = (q||'').toLowerCase().trim();
+  const termRaw = String(q||'').trim();
+  const term = textNorm(termRaw);
+  const box = document.getElementById('search-results');
+  if(!box) return;
+  if(term.length < 2){
+    box.innerHTML = emptyState('🔎','Digite pelo menos 2 letras para buscar time, liga ou jogo.');
+    return;
+  }
   const results = [];
   MATCHES.forEach(m=>{
-    const text = `${teamName(m.home)} ${teamName(m.away)} ${leagueOf(m).name}`.toLowerCase();
-    if(!term || text.includes(term)) results.push({type:'match', label:`${teamName(m.home)} x ${teamName(m.away)}`, sub:`${leagueOf(m).icon} ${leagueOf(m).name} · ${fmtDate(m.date)} ${fmtTime(m.date)}`, id:m.id});
+    const lg = leagueOf(m);
+    const text = textNorm(`${teamName(m.home)} ${teamName(m.away)} ${lg.name} ${lg.country} ${m.round||''} ${m.status}`);
+    if(text.includes(term)){
+      const h = textNorm(teamName(m.home));
+      const a = textNorm(teamName(m.away));
+      const l = textNorm(lg.name);
+      let score = 0;
+      if(h.startsWith(term) || a.startsWith(term)) score += 100;
+      if(h.includes(term) || a.includes(term)) score += 50;
+      if(l.includes(term)) score += 25;
+      if(m.status==='live') score += 20;
+      results.push({type:'match', label:`${teamName(m.home)} x ${teamName(m.away)}`, sub:`${statusLabel(m)} · ${lg.icon} ${lg.name} · ${fmtDate(m.date)} ${fmtTime(m.date)}`, id:m.id, score});
+    }
   });
   NEWS.forEach((n,i)=>{
-    const text = `${n.tag} ${n.title}`.toLowerCase();
-    if(term && text.includes(term)) results.push({type:'news', label:n.title, sub:`${n.tag} · ${n.time}`, id:i});
+    const text = textNorm(`${n.tag} ${n.title}`);
+    if(text.includes(term)) results.push({type:'news', label:n.title, sub:`${n.tag} · ${n.time}`, id:i, score:10});
   });
-  const html = results.slice(0,12).map(r=> r.type==='match'
+  const html = results.sort((a,b)=>b.score-a.score).slice(0,20).map(r=> r.type==='match'
     ? `<div class="search-item" onclick="closeSearch();openMatchDetail('${r.id}')"><b>⚽ ${r.label}</b><span>${r.sub}</span></div>`
     : `<div class="search-item" onclick="closeSearch();goToPage('rank')"><b>📰 ${r.label}</b><span>${r.sub}</span></div>`
-  ).join('') || emptyState('🔎','Nada encontrado');
-  document.getElementById('search-results').innerHTML = html;
+  ).join('') || emptyState('🔎','Nada encontrado para essa busca.');
+  box.innerHTML = html;
+}
+function statusLabel(m){
+  if(m.status==='live') return `🔴 Ao vivo ${m.minute||''}'`;
+  if(m.status==='finished') return `🏁 Encerrado ${m.hs}x${m.as}`;
+  return '⏱️ Pré-jogo';
 }
 
 // ===================== PWA INSTALL =====================
@@ -1689,7 +1804,7 @@ function simulateLiveTicks(){
   setInterval(()=>{
     let changed = false;
     MATCHES.forEach(m=>{
-      if(m.status==='live' && m.minute < 90){
+      if(m.status==='live' && m.minute < 90 && m.source !== 'api-football'){
         m.minute += 1;
         changed = true;
       }
